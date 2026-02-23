@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-165%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-189%20passed-brightgreen.svg)](./tests)
+[![Coverage](https://img.shields.io/badge/Coverage-67.8%25-green.svg)](./tests)
 
 **SWE-Agent-Node** 是一个受 [SWE-agent](https://github.com/SWE-agent/SWE-agent) 启发的 AI 编程助手，能够自主修复 GitHub Issues、改进代码质量，并从经验中持续学习。
 

@@ -12,6 +12,7 @@
 - [CodeModifier](#codemodifier)
 - [LLMClient](#llmclient)
 - [IssueParser](#issueparser)
+- [Retry 工具](#retry-工具)
 - [EvolutionStore](#evolutionstore)
 - [类型定义](#类型定义)
 
@@ -613,6 +614,105 @@ The crash happens in UserService when loading config.
 // result.parsed.mentionedFiles.includes('src/index.ts')
 // result.parsed.mentionedClasses.includes('UserService')
 // result.parsed.suspectedAreas.includes('config')
+```
+
+---
+
+## Retry 工具
+
+错误恢复和重试机制工具集。
+
+### retry
+
+带指数退避的重试机制。
+
+```typescript
+import { retry } from 'swe-agent-node';
+
+const result = await retry(
+  async () => {
+    const response = await fetch(url);
+    return response.json();
+  },
+  {
+    maxRetries: 3,
+    initialDelay: 1000,
+    maxDelay: 30000,
+    backoffFactor: 2,
+    shouldRetry: (error) => error.message.includes('timeout'),
+    onRetry: (attempt, error, delay) => {
+      console.log(`Retry ${attempt} after ${delay}ms`);
+    },
+  }
+);
+```
+
+### withTimeout
+
+带超时控制的执行。
+
+```typescript
+import { withTimeout } from 'swe-agent-node';
+
+const result = await withTimeout(
+  async () => longRunningOperation(),
+  5000, // 5秒超时
+  'Operation timed out'
+);
+```
+
+### CircuitBreaker
+
+电路断路器模式。
+
+```typescript
+import { CircuitBreaker } from 'swe-agent-node';
+
+const breaker = new CircuitBreaker(5, 30000); // 5次失败后打开，30秒后尝试恢复
+
+try {
+  const result = await breaker.execute(async () => {
+    return await externalService();
+  });
+} catch (error) {
+  if (error.message === 'Circuit breaker is open') {
+    // 服务不可用，使用备用方案
+  }
+}
+```
+
+### executeBatch
+
+批量执行，支持部分失败。
+
+```typescript
+import { executeBatch } from 'swe-agent-node';
+
+const { successful, failed } = await executeBatch(
+  items,
+  async (item) => processItem(item),
+  {
+    concurrency: 5,       // 并发数
+    continueOnError: true, // 继续处理其他项
+  }
+);
+
+console.log(`成功: ${successful.length}, 失败: ${failed.length}`);
+```
+
+### 其他工具
+
+```typescript
+// 延迟
+await delay(1000);
+
+// 计算退避延迟
+const backoff = calculateBackoff(attempt, { initialDelay: 1000 });
+
+// 判断是否可重试
+if (isRetryableError(error)) {
+  // 重试
+}
 ```
 
 ---
