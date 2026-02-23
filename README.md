@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/Tests-100%20passed-brightgreen.svg)](./tests)
 
 **SWE-Agent-Node** 是一个受 [SWE-agent](https://github.com/SWE-agent/SWE-agent) 启发的 AI 编程助手，能够自主修复 GitHub Issues、改进代码质量，并从经验中持续学习。
 
@@ -12,7 +13,9 @@
 
 - 🎯 **自主修复**: 自动分析问题、定位代码、生成修复
 - 🧠 **自进化**: 从成功和失败中学习，持续优化策略
-- 🔧 **简洁设计**: 100 行核心代码的哲学，简单而强大
+- 🔧 **简洁设计**: 遵循 mini-SWE-agent 哲学，简单而强大
+- 🔍 **智能搜索**: 多维度代码搜索（关键词、函数、类、错误信息）
+- 🔄 **安全回滚**: 自动备份和回滚机制
 - 🔗 **OpenClaw 集成**: 与 OpenClaw 生态系统深度集成
 - 📦 **即插即用**: 作为 Skill 或独立 CLI 使用
 
@@ -103,6 +106,7 @@ console.log(solution.summary)
 
 - [基础使用](./examples/basic-usage.ts) - 快速上手示例
 - [进化学习](./examples/evolution-learning.ts) - 自进化功能示例
+- [完整工作流](./examples/full-workflow.ts) - 从问题到修复的完整流程
 
 ## 🏗️ 架构概览
 
@@ -207,7 +211,7 @@ knowledge.forEach(k => {
 # 开发模式
 npm run dev
 
-# 运行测试
+# 运行测试 (100 个用例)
 npm test
 
 # 代码检查
@@ -215,7 +219,22 @@ npm run lint
 
 # 格式化代码
 npm run format
+
+# 构建
+npm run build
 ```
+
+## 📊 测试覆盖
+
+| 模块 | 测试用例 |
+|------|---------|
+| 类型定义 | 22 |
+| 进化存储 | 20 |
+| 代码搜索 | 17 |
+| Shell 环境 | 18 |
+| Git 环境 | 13 |
+| 代码修改 | 10 |
+| **总计** | **100** |
 
 ## 📋 路线图
 
@@ -229,7 +248,7 @@ npm run format
 
 ## 🤝 贡献
 
-欢迎贡献！请查看 [CONTRIBUTING.md](./CONTRIBUTING.md)（待创建）
+欢迎贡献！请查看 [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## 📄 许可证
 

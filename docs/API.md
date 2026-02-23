@@ -9,6 +9,7 @@
 - [GitEnv](#gitenv)
 - [ShellEnv](#shellenv)
 - [CodeSearch](#codesearch)
+- [CodeModifier](#codemodifier)
 - [EvolutionStore](#evolutionstore)
 - [类型定义](#类型定义)
 
@@ -268,6 +269,121 @@ const results = await searcher.searchError('Cannot read property');
 const snippet = await searcher.getSnippet('src/auth.ts', 10, 20);
 console.log(snippet.content);   // 代码内容
 console.log(snippet.language);  // 语言类型
+```
+
+---
+
+## CodeModifier
+
+代码修改应用器，支持创建、修改、删除文件操作，并提供自动备份和回滚功能。
+
+### 构造函数
+
+```typescript
+new CodeModifier(repoPath: string)
+```
+
+### 方法
+
+#### `applyModifications(modifications: CodeModification[]): Promise<void>`
+
+批量应用代码修改。
+
+```typescript
+const modifier = new CodeModifier('/path/to/repo');
+
+await modifier.applyModifications([
+  {
+    file: 'src/utils.ts',
+    type: 'modify',
+    oldContent: 'const x = 1;',
+    newContent: 'const x = 2;',
+  },
+  {
+    file: 'src/new.ts',
+    type: 'create',
+    newContent: 'export const y = 1;',
+  },
+]);
+```
+
+#### `rollback(): Promise<void>`
+
+回滚所有已应用的修改。
+
+```typescript
+// 如果出现问题，回滚所有更改
+await modifier.rollback();
+```
+
+#### `preview(modifications: CodeModification[]): string`
+
+预览修改内容（不实际应用）。
+
+```typescript
+const preview = modifier.preview(modifications);
+console.log(preview);
+// 输出:
+// +++ CREATE: src/new.ts
+// export const y = 1;
+// --- MODIFY: src/utils.ts
+// ...
+```
+
+#### `getModifiedFiles(): string[]`
+
+获取已修改的文件列表。
+
+```typescript
+const files = modifier.getModifiedFiles();
+console.log(files); // ['src/utils.ts', 'src/new.ts']
+```
+
+#### `cleanup(): Promise<void>`
+
+清理备份文件（确认修改后调用）。
+
+```typescript
+await modifier.cleanup();
+```
+
+### 辅助函数
+
+#### `createModificationFromSnippet(snippet: CodeSnippet, newContent: string, description?: string): CodeModification`
+
+从代码片段创建修改。
+
+```typescript
+import { createModificationFromSnippet } from 'swe-agent-node';
+
+const mod = createModificationFromSnippet(
+  { file: 'src/app.ts', content: 'old code', startLine: 10, endLine: 20 },
+  'new code',
+  '修复 bug'
+);
+```
+
+#### `createFileModification(filePath: string, content: string, description?: string): CodeModification`
+
+创建新文件修改。
+
+```typescript
+import { createFileModification } from 'swe-agent-node';
+
+const mod = createFileModification(
+  'src/new-module.ts',
+  'export class NewModule {}'
+);
+```
+
+#### `deleteFileModification(filePath: string, currentContent?: string, description?: string): CodeModification`
+
+创建删除文件修改。
+
+```typescript
+import { deleteFileModification } from 'swe-agent-node';
+
+const mod = deleteFileModification('src/old-file.ts');
 ```
 
 ---
