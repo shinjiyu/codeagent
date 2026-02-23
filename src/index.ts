@@ -27,6 +27,15 @@ export {
 } from './retry'
 export type { RetryConfig } from './retry'
 
+// 执行计划
+export { ExecutionPlanner } from './execution-planner'
+export type { 
+  ExecutionStep, 
+  ExecutionPlan, 
+  PlanningContext,
+  StepType as ExecutionStepType 
+} from './execution-planner'
+
 // 类型
 export * from './types'
 
