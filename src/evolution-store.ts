@@ -415,18 +415,27 @@ export class EvolutionStore {
   }
 
   private async persistPatterns(): Promise<void> {
+    if (!fs.existsSync(this.storePath)) {
+      fs.mkdirSync(this.storePath, { recursive: true })
+    }
     const filePath = path.join(this.storePath, 'patterns.json')
     const patterns = Array.from(this.patterns.values())
     fs.writeFileSync(filePath, JSON.stringify(patterns, null, 2))
   }
 
   private async persistKnowledge(): Promise<void> {
+    if (!fs.existsSync(this.storePath)) {
+      fs.mkdirSync(this.storePath, { recursive: true })
+    }
     const filePath = path.join(this.storePath, 'knowledge.json')
     const knowledge = Array.from(this.knowledge.values())
     fs.writeFileSync(filePath, JSON.stringify(knowledge, null, 2))
   }
 
   private async persistStrategy(): Promise<void> {
+    if (!fs.existsSync(this.storePath)) {
+      fs.mkdirSync(this.storePath, { recursive: true })
+    }
     const filePath = path.join(this.storePath, 'strategy.json')
     fs.writeFileSync(filePath, JSON.stringify(this.strategy, null, 2))
   }
