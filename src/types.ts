@@ -228,6 +228,48 @@ export interface AgentConfig {
   test: TestConfig
   /** 进化配置 */
   evolution: EvolutionConfig
+  /** 自主性配置 */
+  autonomy?: AutonomyConfig
+}
+
+/**
+ * 自主性级别
+ */
+export enum AutonomyLevel {
+  /** 仅建议 - Agent 只提供建议，所有决策由人类做出 */
+  SUGGEST = 0,
+  
+  /** 辅助编辑 - Agent 可以执行操作，但需要人类确认 */
+  ASSIST = 1,
+  
+  /** 自动执行 - Agent 自动执行，但支持回滚 */
+  AUTO = 2,
+  
+  /** 完全自主 - Agent 完全自主执行，事后验证 */
+  AUTONOMOUS = 3,
+}
+
+/**
+ * 自主性配置
+ */
+export interface AutonomyConfig {
+  /** 当前自主性级别 */
+  level: AutonomyLevel
+  
+  /** 需要确认的操作类型 */
+  requireConfirmation?: string[]
+  
+  /** 自动回滚的超时时间（毫秒） */
+  autoRollbackTimeout?: number
+  
+  /** 最大自动执行步数 */
+  maxAutoSteps?: number
+  
+  /** 是否启用安全边界 */
+  enableSafetyBoundaries?: boolean
+  
+  /** 禁止的操作类型 */
+  forbiddenActions?: string[]
 }
 
 export interface LLMConfig {

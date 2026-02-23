@@ -10,6 +10,7 @@ import { CodeSearch } from './code-search'
 import { CodeModifier } from './code-modifier'
 import { ShellEnv } from './shell-env'
 import { EvolutionStore } from './evolution-store'
+import { AutonomyManager, createDefaultAutonomyConfig } from './autonomy'
 import type {
   AgentConfig,
   AgentEvent,
@@ -41,6 +42,7 @@ export class Agent {
   private strategy: Strategy
   private shellEnv: ShellEnv
   private evolutionStore: EvolutionStore | null = null
+  private autonomyManager: AutonomyManager
 
   constructor(config: AgentConfig) {
     this.config = config
@@ -50,6 +52,11 @@ export class Agent {
     if (config.evolution.enabled) {
       this.evolutionStore = new EvolutionStore()
     }
+    
+    // 初始化自主性管理器
+    this.autonomyManager = new AutonomyManager(
+      config.autonomy ?? createDefaultAutonomyConfig()
+    )
   }
 
   /**
