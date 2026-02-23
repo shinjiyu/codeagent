@@ -1,0 +1,39 @@
+# 默认配置文件
+# 复制此文件为 swe-agent.config.yaml 并根据需要修改
+
+# Agent 基础配置
+agent:
+  maxSteps: 10           # 最大执行步骤数
+  maxRetries: 3          # 失败后的重试次数
+
+# LLM 配置
+llm:
+  model: gpt-4           # 使用的模型
+  temperature: 0.7       # 温度参数（0-1）
+  maxTokens: 4000        # 最大 token 数
+  # endpoint: http://localhost:8080  # OpenClaw API endpoint（可选）
+
+# Git 配置
+git:
+  defaultBranch: main    # 默认分支名
+  commitTemplate: "fix: {issue}"  # Commit message 模板
+  autoPush: false        # 是否自动推送
+
+# 测试配置
+test:
+  command: npm test      # 测试命令
+  pattern: "**/*.test.{ts,js}"  # 测试文件模式
+  timeout: 60000         # 超时时间（毫秒）
+
+# 自进化配置
+evolution:
+  enabled: true          # 是否启用自进化
+  patternMiningInterval: 10  # 模式挖掘间隔（执行次数）
+  minConfidence: 0.5     # 最小置信度阈值
+  maxKnowledgeSize: 1000 # 知识库最大容量
+
+# 日志配置
+logging:
+  level: info            # 日志级别：debug, info, warn, error
+  format: text           # 日志格式：text, json
+  output: console        # 输出目标：console, file

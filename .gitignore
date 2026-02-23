@@ -1,0 +1,50 @@
+# 依赖
+node_modules/
+package-lock.json
+yarn.lock
+
+# 构建输出
+dist/
+build/
+*.tsbuildinfo
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 测试
+coverage/
+.nyc_output/
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+
+# 临时文件
+tmp/
+temp/
+.tmp/
+
+# 进化存储
+evolution-store/
+.history/
+
+# 仓库克隆
+repos/
+
+# 其他
+.cache/
+*.bak
