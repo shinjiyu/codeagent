@@ -1,5 +1,9 @@
 # SWE-Agent-Node 项目目标
 
+## 仓库信息
+- **GitHub**: https://github.com/shinjiyu/codeagent
+- **Owner**: shinjiyu
+
 ## 愿景
 
 创建一个 **自进化的 Node.js 软件开发 AI Agent**，能够：

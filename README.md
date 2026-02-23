@@ -2,6 +2,7 @@
 
 > 自进化的 Node.js 软件开发 AI Agent
 
+[![GitHub](https://img.shields.io/badge/GitHub-shinjiyu/codeagent-blue)](https://github.com/shinjiyu/codeagent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
@@ -26,8 +27,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/openclaw/swe-agent-node.git
-cd swe-agent-node
+git clone https://github.com/shinjiyu/codeagent.git
+cd codeagent
 
 # 安装依赖
 npm install
