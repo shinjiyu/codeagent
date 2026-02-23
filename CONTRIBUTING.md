@@ -145,6 +145,7 @@ async searchByKeywords(
 - 每个模块应有对应的测试文件
 - 测试文件放在 `tests/` 目录
 - 使用 Jest 测试框架
+- **目标覆盖率**: 70%+
 
 ```typescript
 describe('CodeSearch', () => {
@@ -155,6 +156,26 @@ describe('CodeSearch', () => {
   });
 });
 ```
+
+### 测试编写指南
+
+参考 `examples/testing-guide.ts` 获取完整的测试示例。
+
+#### 测试类型
+
+1. **单元测试** - 测试单个函数或类
+2. **集成测试** - 测试模块间的协作
+3. **边缘情况** - 测试空值、超长输入、特殊字符等
+4. **类型测试** - 验证类型定义的正确性
+
+#### 测试最佳实践
+
+- ✅ 使用 `describe()` 组织相关测试
+- ✅ 使用 `beforeEach()` 初始化测试环境
+- ✅ 测试正常情况和边缘情况
+- ✅ 使用有意义的测试名称
+- ✅ 保持测试独立和可重复
+- ✅ Mock 外部依赖（LLM、Git 等）
 
 ### 运行测试
 
@@ -167,20 +188,80 @@ npm test -- code-search.test.ts
 
 # 生成覆盖率报告
 npm test -- --coverage
+
+# 查看详细覆盖率
+npm test -- --coverage --coverageReporters=text
 ```
 
+### 测试统计
+
+当前测试覆盖率：
+- **语句覆盖率**: 70.44%
+- **分支覆盖率**: 58.82%
+- **函数覆盖率**: 69.45%
+- **行覆盖率**: 72.41%
+- **测试总数**: 231 个
+
+详见：[测试报告](./ITERATION_REPORT_2026-02-24.md)
+
 ## 📚 文档规范
+
+### 文档结构
+
+```
+docs/
+├── API.md                    # API 参考文档
+├── RESEARCH_REPORT.md        # 研究报告
+├── ENHANCED_ARCHITECTURE.md  # 架构设计
+├── COMPETITOR_RESEARCH.md    # 竞品分析
+├── TOOL_FACTORY.md          # 工具工厂文档
+├── CONTEXT_ENGINEER.md      # Context Engineer 文档
+├── CODE_EVOLVER.md          # Code Evolver 文档
+└── RL_LOOP.md               # RL Loop 文档
+```
 
 ### API 文档
 
 - 更新 `docs/API.md` 记录新 API
 - 包含参数类型和返回值
 - 提供使用示例
+- 使用 TSDoc 注释
+
+```typescript
+/**
+ * 搜索包含关键词的代码
+ * @param keywords 搜索关键词列表
+ * @param options 搜索选项
+ * @returns 匹配的代码位置列表
+ * @example
+ * const results = await searcher.searchByKeywords(['error', 'bug']);
+ */
+async searchByKeywords(
+  keywords: string[],
+  options?: SearchOptions
+): Promise<CodeLocation[]>
+```
+
+### 示例代码
+
+- 添加示例到 `examples/` 目录
+- 包含完整的注释和说明
+- 涵盖常见使用场景
+
+当前示例：
+- `basic-usage.ts` - 基础使用
+- `full-workflow.ts` - 完整工作流
+- `evolution-learning.ts` - 进化学习
+- `issue-parsing.ts` - Issue 解析
+- `tool-calling.ts` - 工具调用
+- `testing-guide.ts` - 测试指南 ⭐
 
 ### README 更新
 
 - 新功能需更新 README 特性列表
 - 保持安装和使用说明最新
+- 更新徽章和统计数据
+- 添加到文档索引
 
 ## 🔍 代码审查
 

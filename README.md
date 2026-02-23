@@ -6,6 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
+[![Test Coverage](https://img.shields.io/badge/Coverage-70%25-brightgreen.svg)](./ITERATION_REPORT_2026-02-24.md)
+[![Tests](https://img.shields.io/badge/Tests-231%20passed-success.svg)](./tests/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-success.svg)](https://github.com/shinjiyu/codeagent)
 
 **SWE-Agent-Node 2.0** 融合四个前沿智能体方向，实现真正的自我进化能力。
 
@@ -40,14 +43,31 @@
 
 ## 📖 文档
 
+### 核心文档
+
 | 文档 | 描述 |
 |------|------|
+| [API 文档](./docs/API.md) | 完整的 API 参考 |
 | [研究报告](./docs/RESEARCH_REPORT.md) | 四个方向的深度分析 |
 | [增强架构](./docs/ENHANCED_ARCHITECTURE.md) | 整体架构设计 |
+| [竞品研究](./docs/COMPETITOR_RESEARCH.md) | SWE-Agent 等竞品分析 |
+
+### 功能模块
+
+| 文档 | 描述 |
+|------|------|
 | [Tool Factory](./docs/TOOL_FACTORY.md) | 运行时工具合成 |
 | [Context Engineer](./docs/CONTEXT_ENGINEER.md) | Prompt 演化系统 |
 | [Code Evolver](./docs/CODE_EVOLVER.md) | 源码自我修改 |
 | [RL Loop](./docs/RL_LOOP.md) | 强化学习闭环 |
+
+### 迭代报告
+
+| 文档 | 描述 |
+|------|------|
+| [迭代 #23](./ITERATION_REPORT_2026-02-24.md) | 测试覆盖率提升 |
+| [迭代总结](./docs/ITERATION_SUMMARY.md) | 迭代过程记录 |
+| [里程碑](./docs/MILESTONE_20.md) | 2.0 里程碑计划 |
 
 ## 🚀 快速开始
 
@@ -227,6 +247,8 @@ npx ts-node poc/rl-loop-poc.ts
 
 ## 🛠️ 开发
 
+### 开发命令
+
 ```bash
 # 开发模式
 npm run dev
@@ -234,11 +256,42 @@ npm run dev
 # 运行测试
 npm test
 
+# 运行测试并生成覆盖率报告
+npm test -- --coverage
+
 # 代码检查
 npm run lint
 
 # 构建
 npm run build
+```
+
+### 测试统计
+
+- **测试套件**: 13 个
+- **测试用例**: 231 个
+- **覆盖率**: 70%+
+- **详情**: [测试报告](./ITERATION_REPORT_2026-02-24.md)
+
+### 示例代码
+
+项目包含多个示例，帮助快速上手：
+
+```bash
+# 基础用法
+npx ts-node examples/basic-usage.ts
+
+# 完整工作流
+npx ts-node examples/full-workflow.ts
+
+# 进化学习
+npx ts-node examples/evolution-learning.ts
+
+# Issue 解析
+npx ts-node examples/issue-parsing.ts
+
+# 工具调用
+npx ts-node examples/tool-calling.ts
 ```
 
 ## 📊 与 SWE-agent 的区别
