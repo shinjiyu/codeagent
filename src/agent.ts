@@ -4,6 +4,12 @@
  */
 
 import { v4 as uuidv4 } from 'uuid'
+import * as fs from 'fs'
+import * as path from 'path'
+import { CodeSearch } from './code-search'
+import { CodeModifier } from './code-modifier'
+import { ShellEnv } from './shell-env'
+import { EvolutionStore } from './evolution-store'
 import type {
   AgentConfig,
   AgentEvent,
@@ -33,10 +39,17 @@ export class Agent {
   private trajectory: Trajectory | null = null
   private eventListeners: Map<AgentEventType, Function[]> = new Map()
   private strategy: Strategy
+  private shellEnv: ShellEnv
+  private evolutionStore: EvolutionStore | null = null
 
   constructor(config: AgentConfig) {
     this.config = config
     this.strategy = this.getDefaultStrategy()
+    this.shellEnv = new ShellEnv()
+    
+    if (config.evolution.enabled) {
+      this.evolutionStore = new EvolutionStore()
+    }
   }
 
   /**
@@ -259,8 +272,32 @@ export class Agent {
     repo: Repository,
     keywords: string[]
   ): Promise<CodeLocation[]> {
-    // TODO: 实现代码搜索
-    return []
+    const searcher = new CodeSearch(repo.path)
+    
+    // 搜索关键词匹配
+    const locations = await searcher.searchByKeywords(keywords, {
+      maxResults: 20,
+      contextLines: 10,
+    })
+
+    // 如果有错误信息，搜索错误
+    const errorLocations = keywords.filter(k => 
+      k.includes('error') || k.includes('Error') || k.includes('exception')
+    )
+
+    for (const error of errorLocations) {
+      const errorResults = await searcher.searchError(error)
+      locations.push(...errorResults.slice(0, 5))
+    }
+
+    // 去重
+    const seen = new Set<string>()
+    return locations.filter(loc => {
+      const key = `${loc.file}:${loc.line}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
 
   /**
@@ -282,7 +319,15 @@ export class Agent {
     repo: Repository,
     modifications: CodeModification[]
   ): Promise<void> {
-    // TODO: 实现修改应用
+    const modifier = new CodeModifier(repo.path)
+    
+    try {
+      await modifier.applyModifications(modifications)
+    } catch (error: any) {
+      // 应用失败，回滚
+      await modifier.rollback()
+      throw new Error(`Failed to apply modifications: ${error.message}`)
+    }
   }
 
   /**
@@ -292,8 +337,31 @@ export class Agent {
     repo: Repository,
     modifications: CodeModification[]
   ): Promise<TestResult | undefined> {
-    // TODO: 实现测试运行
-    return undefined
+    // 设置工作目录
+    this.shellEnv = new ShellEnv(repo.path)
+    
+    // 使用配置的测试命令
+    const testCommand = this.config.test.command
+    const testPattern = this.config.test.pattern
+    
+    try {
+      const result = await this.shellEnv.runTests(testCommand, testPattern)
+      return result
+    } catch (error: any) {
+      // 测试运行失败
+      return {
+        passed: 0,
+        failed: 1,
+        skipped: 0,
+        total: 1,
+        output: error.message,
+        failures: [{
+          test: 'test-execution',
+          file: 'unknown',
+          message: error.message,
+        }],
+      }
+    }
   }
 
   /**
@@ -304,15 +372,47 @@ export class Agent {
     modifications: CodeModification[],
     issue: Issue
   ): Promise<string> {
-    // TODO: 实现 Git 提交
-    return ''
+    // 设置工作目录
+    this.shellEnv = new ShellEnv(repo.path)
+    
+    // Git add
+    const files = modifications.map(m => m.file).join(' ')
+    const addResult = await this.shellEnv.exec(`git add ${files}`)
+    
+    if (!addResult.success) {
+      throw new Error(`Failed to stage changes: ${addResult.stderr}`)
+    }
+    
+    // 生成提交消息
+    const commitMessage = this.config.git.commitTemplate
+      .replace('{message}', issue.title)
+      .replace('{issue_id}', issue.id)
+    
+    // Git commit
+    const commitResult = await this.shellEnv.exec(`git commit -m "${commitMessage}"`)
+    
+    if (!commitResult.success) {
+      throw new Error(`Failed to commit changes: ${commitResult.stderr}`)
+    }
+    
+    // 获取 commit hash
+    const hashResult = await this.shellEnv.exec('git rev-parse HEAD')
+    return hashResult.stdout.trim()
   }
 
   /**
    * 回滚更改
    */
   private async rollback(repo: Repository): Promise<void> {
-    // TODO: 实现回滚
+    this.shellEnv = new ShellEnv(repo.path)
+    
+    try {
+      // Git reset --hard 回滚所有更改
+      await this.shellEnv.exec('git checkout .')
+      await this.shellEnv.exec('git clean -fd')
+    } catch (error) {
+      console.error('Rollback failed:', error)
+    }
   }
 
   // ==================== 辅助方法 ====================
@@ -385,21 +485,41 @@ export class Agent {
   // ==================== 持久化方法 ====================
 
   private async saveTrajectory(): Promise<void> {
-    // TODO: 保存到文件或数据库
-    const trajectoryPath = `./history/trajectories/${this.trajectory?.id}.json`
-    // await fs.writeFile(trajectoryPath, JSON.stringify(this.trajectory, null, 2))
+    if (!this.evolutionStore || !this.trajectory) return
+    
+    await this.evolutionStore.saveTrajectory(this.trajectory)
   }
 
   private async savePattern(pattern: Pattern): Promise<void> {
-    // TODO: 保存模式到 Pattern Library
+    if (!this.evolutionStore) return
+    
+    await this.evolutionStore.savePattern(pattern)
   }
 
   private async saveKnowledge(knowledge: Knowledge): Promise<void> {
-    // TODO: 保存知识到 Knowledge Base
+    if (!this.evolutionStore) return
+    
+    await this.evolutionStore.saveKnowledge(knowledge)
   }
 
   private async optimizeStrategy(): Promise<void> {
-    // TODO: 根据模式优化策略
+    if (!this.evolutionStore) return
+    
+    const patterns = this.evolutionStore.getAllPatterns()
+    const successPatterns = patterns.filter(p => p.type === 'success' && p.confidence > 0.7)
+    
+    // 根据成功模式调整搜索权重
+    for (const pattern of successPatterns) {
+      // 增加相关权重
+      const triggerWords = pattern.trigger.toLowerCase().split(/\s+/)
+      for (const word of triggerWords) {
+        if (this.strategy.searchWeights[word] !== undefined) {
+          this.strategy.searchWeights[word] *= 1.1
+        }
+      }
+    }
+    
+    await this.evolutionStore.updateStrategy(this.strategy)
   }
 
   // ==================== 事件系统 ====================
