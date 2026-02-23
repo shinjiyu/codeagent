@@ -1,7 +1,7 @@
 # 竞品研究报告
 
-**研究日期**: 2026-02-23  
-**最后更新**: 2026-02-24 (迭代 #21)
+**研究日期**: 2026-02-23
+**最后更新**: 2026-02-24 (迭代 #25)
 
 ---
 
@@ -35,17 +35,33 @@
 
 ---
 
-## 🔥 最新动态 (2026-02)
+## 🔥 最新动态 (2026-02-24 更新)
 
-### SWE-bench 排行榜更新 (2026-02-23)
+### SWE-agent 1.0 重大里程碑 (2026-02-25/28)
 
-最新排名显示 mini-SWE-agent v2 + Claude 4.5 Opus 表现优异：
+SWE-agent 团队宣布：
 
-| 排名 | Agent | 模型 | 得分 |
-|------|-------|------|------|
-| 🥇 | mini-SWE-agent v2 | Claude 4.5 Opus | 76.4% |
-| 🥈 | SWE-agent | Claude 3.7 | 74%+ |
-| 🥉 | mini-SWE-agent v2 | GPT-4o | 72%+ |
+- **2026-02-28**: SWE-agent 1.0 + Claude 3.7 达到 SWE-bench Full SOTA
+- **2026-02-25**: SWE-agent 1.0 + Claude 3.7 达到 SWE-bench Verified SOTA
+- **2026-02-13**: 发布 SWE-agent 1.0，SWE-bench Lite SOTA + 大量新功能
+
+### mini-SWE-agent 成为发展重点
+
+团队公告：
+> "Most of our current development effort is on mini-swe-agent, which will eventually supersede SWE-agent."
+
+**性能对比**:
+- mini-SWE-agent 已经匹配 SWE-agent 的性能
+- 代码量显著减少（~100 行核心代码）
+
+### SWE-bench 最新排名 (2026-02-24)
+
+| 排名 | Agent | 模型 | 基准测试 | 得分 |
+|------|-------|------|---------|------|
+| 🥇 | SWE-agent 1.0 | Claude 3.7 | SWE-bench Full | 52%+ |
+| 🥇 | SWE-agent 1.0 | Claude 3.7 | SWE-bench Verified | ~76% |
+| 🥇 | SWE-agent 1.0 | Claude 3.7 | SWE-bench Lite | 74%+ |
+| 🥈 | mini-SWE-agent v2 | Claude 4.5 Opus | SWE-bench Verified | 76.4% |
 
 ### mini-SWE-agent v2.0 发布
 **发布日期**: 2026-02-11  
@@ -261,7 +277,7 @@ ContreeEnvironment、Modal 等新选项。
 
 ### 6. Cursor
 
-**官网**: https://cursor.sh  
+**官网**: https://cursor.com
 **定位**: AI 驱动的代码编辑器
 
 #### 核心特性
@@ -269,11 +285,27 @@ ContreeEnvironment、Modal 等新选项。
 - 💬 **Chat 模式**: 对话式编程
 - 🔍 **代码库理解**: 理解整个项目
 - 📝 **内联编辑**: 直接在代码中编辑
+- 🎛️ **自主性滑块**: 从 Tab 补全到完全自主
+- 🏢 **企业级**: Fortune 500 中超过半数使用
+
+#### 最新动态 (2026-02)
+- **2026-02-05**: 发布 "Self-driving codebases" 多 Agent 研究预览
+- **2026-01-21**: Salesforce 部署到 20,000 开发者，90% 采用率
+- **企业采用**: NVIDIA 40,000 工程师使用 AI 辅助，生产力显著提升
+
+#### 客户评价
+
+**Jensen Huang (NVIDIA CEO)**:
+> "My favorite enterprise AI service is Cursor. Every one of our engineers, some 40,000, are now assisted by AI and our productivity has gone up incredibly."
+
+**Andrej Karpathy (CEO, Eureka Labs)**:
+> "The best LLM applications have an autonomy slider: you control how much independence to give the AI."
 
 #### 差异化
 - IDE 集成（基于 VS Code）
-- 专注于辅助而非自主
-- 开发者友好
+- 自主性可控（从辅助到自主）
+- 企业广泛采用
+- 强调安全性
 
 ---
 
@@ -326,15 +358,49 @@ ContreeEnvironment、Modal 等新选项。
 | 指数退避重试 | 通用最佳实践 | ✅ |
 | 电路断路器 | 通用最佳实践 | ✅ |
 
-### 待实现
+### 新发现趋势 (2026-02-24)
 
-| 功能 | 优先级 | 预计版本 |
-|------|--------|----------|
-| 多模态支持 | P1 | v0.2.0 |
-| 更多沙箱选项 | P1 | v0.2.0 |
-| SWE-bench 评估 | P0 | v0.2.0 |
-| 训练数据生成 | P2 | v0.3.0 |
-| 并行执行 | P2 | v0.3.0 |
+#### 1. 自主性滑块设计
+Cursor 的 "autonomy slider" 概念：
+- Tab 补全 → Cmd+K 精准编辑 → 完全自主 Agent
+- 用户可以控制 AI 的自主程度
+
+**应用到 SWE-agent-node**:
+- [ ] 设计可配置的自主性级别
+- [ ] 从辅助模式到完全自主模式
+
+#### 2. 企业级部署经验
+NVIDIA、Salesforce 等大规模部署：
+- 40,000 工程师（NVIDIA）
+- 20,000 开发者（Salesforce）
+- 90%+ 采用率
+
+**应用到 SWE-agent-node**:
+- [ ] 企业级部署指南
+- [ ] 安全和合规考虑
+- [ ] 大规模部署最佳实践
+
+#### 3. 多 Agent 协作
+Cursor 的 "Self-driving codebases" 研究：
+- 多 Agent 协作
+- 自动化代码库维护
+
+**应用到 SWE-agent-node**:
+- [ ] 多 Agent 协作架构
+- [ ] 任务分配和协调机制
+
+### 待实现优先级更新
+
+| 功能 | 优先级 | 预计版本 | 来源 |
+|------|--------|----------|------|
+| SWE-bench 评估 | P0 | v0.2.0 | 所有竞品 |
+| 多模态支持 | P1 | v0.2.0 | mini v2 |
+| 自主性级别设计 | P1 | v0.2.0 | Cursor |
+| 更多沙箱选项 | P1 | v0.2.0 | SWE-ReX |
+| 企业级部署 | P2 | v0.3.0 | Cursor |
+| 多 Agent 协作 | P2 | v0.3.0 | Cursor |
+| 训练数据生成 | P2 | v0.3.0 | SWE-smith |
+| 并行执行 | P2 | v0.3.0 | SWE-ReX |
 
 ### SWE-agent-node 独特优势
 
@@ -397,23 +463,180 @@ ContreeEnvironment、Modal 等新选项。
 
 ---
 
-## 行动建议 (更新)
+## 行动建议 (更新 2026-02-24)
 
-### 短期 (v0.2)
-- [x] 实现 Tool Calling 接口 ✅
-- [ ] 在 SWE-bench lite 上评估性能
-- [ ] 添加多模态输入支持
+### 🔴 紧急 (v0.2.0 - Q1 2026)
 
-### 中期 (v0.3)
-- [ ] 实现类似 SWE-ReX 的并行执行
-- [ ] 构建训练数据生成能力
-- [ ] 优化自进化算法
+#### P0 - SWE-bench 评估
+- **目标**: 在 SWE-bench Lite 上达到 60%+
+- **原因**: 证明基本能力，建立可信度
+- **行动**:
+  1. 设置 SWE-bench Lite 测试环境
+  2. 运行 50-100 个样本测试
+  3. 分析失败案例，优化策略
+  4. 发布评估报告
 
-### 长期 (v1.0)
-- [ ] 多语言支持
-- [ ] IDE 插件
-- [ ] 开源模型 fine-tuning
-- [ ] 社区贡献生态
+#### P0 - 自主性级别设计
+- **灵感**: Cursor 的 autonomy slider
+- **设计**:
+  ```
+  Level 0: 仅建议（人类决策）
+  Level 1: 辅助编辑（需确认）
+  Level 2: 自动执行（可回滚）
+  Level 3: 完全自主（trust & verify）
+  ```
+- **行动**:
+  1. 设计自主性级别 API
+  2. 实现配置系统
+  3. 添加安全边界
+
+### 🟡 重要 (v0.3.0 - Q2 2026)
+
+#### P1 - 多模态支持
+- **参考**: mini-SWE-agent v2
+- **功能**: 支持截图、UI 错误图片
+- **行动**:
+  1. 集成图像识别 API
+  2. 添加图片输入接口
+  3. 训练图片理解能力
+
+#### P1 - 企业级准备
+- **参考**: Cursor、NVIDIA、Salesforce
+- **功能**:
+  - 安全审计
+  - 合规性报告
+  - 大规模部署指南
+- **行动**:
+  1. 编写安全白皮书
+  2. 准备部署文档
+  3. 建立支持渠道
+
+#### P1 - 多 Agent 协作
+- **参考**: Cursor "Self-driving codebases"
+- **功能**: 多个 Agent 协作解决复杂问题
+- **行动**:
+  1. 设计协作架构
+  2. 实现任务分配
+  3. 建立协调机制
+
+### 🟢 长期 (v1.0+ - 2026 H2)
+
+#### P2 - 开源模型 Fine-tuning
+- **参考**: SWE-agent-LM-32b
+- **目标**: 训练专用模型
+- **行动**:
+  1. 收集训练数据
+  2. Fine-tune 开源模型
+  3. 评估性能提升
+
+#### P2 - IDE 插件
+- **参考**: Cursor、Copilot
+- **目标**: VS Code/JetBrains 插件
+- **行动**:
+  1. 调研插件开发
+  2. 设计 UX
+  3. 实现核心功能
+
+---
+
+## 📊 关键指标对比
+
+### 性能指标
+
+| Agent | SWE-bench Verified | SWE-bench Lite | SWE-bench Full |
+|-------|-------------------|----------------|----------------|
+| SWE-agent 1.0 + Claude 3.7 | ~76% | 74%+ | 52%+ |
+| mini-SWE-agent v2 + Claude 4.5 | 76.4% | 74%+ | TBD |
+| **SWE-agent-node** | **待测试** | **待测试** | **待测试** |
+
+### 采用指标
+
+| Agent | 企业客户 | 用户数 | 企业采用率 |
+|-------|---------|--------|----------|
+| Cursor | 50%+ Fortune 500 | - | 90% (Salesforce) |
+| Copilot | - | 数百万 | 广泛 |
+| SWE-agent | 研究为主 | 学术界 | N/A |
+| **SWE-agent-node** | **0** | **0** | **N/A** |
+
+### 技术指标
+
+| Agent | 代码量 | 语言 | 自进化 | 开源 |
+|-------|--------|------|--------|------|
+| SWE-agent | ~5000 行 | Python | ❌ | ✅ |
+| mini-SWE-agent | ~100 行 | Python | ❌ | ✅ |
+| Devin | - | - | ❓ | ❌ |
+| Cursor | - | TypeScript | ❌ | ❌ |
+| **SWE-agent-node** | **~500 行** | **TypeScript** | **✅** | **✅** |
+
+---
+
+## 🎯 SWE-agent-node 的定位策略
+
+### 核心差异化
+
+1. **自进化能力** ⭐
+   - 唯一具备自我学习能力的开源 Agent
+   - 从成功/失败中持续改进
+   - 模式挖掘和知识积累
+
+2. **TypeScript 生态**
+   - 前端/全栈项目的最佳选择
+   - npm 生态优势
+   - 与现代 Web 技术栈无缝集成
+
+3. **研究友好**
+   - 清晰的架构
+   - 完整的文档
+   - 易于扩展和定制
+
+### 目标用户
+
+| 用户类型 | 需求 | 推荐度 |
+|---------|------|--------|
+| 前端/全栈开发者 | TypeScript 项目修复 | ⭐⭐⭐⭐⭐ |
+| AI 研究员 | 自进化 Agent 研究 | ⭐⭐⭐⭐⭐ |
+| 企业开发团队 | 定制化 Agent 开发 | ⭐⭐⭐⭐ |
+| 开源贡献者 | 学习和贡献 | ⭐⭐⭐⭐ |
+| Python 开发者 | 通用 bug 修复 | ⭐⭐⭐ |
+
+### 竞争策略
+
+#### 不与谁竞争
+- ❌ 不做 IDE 插件（vs Cursor, Copilot）
+- ❌ 不做企业级 SaaS（vs Devin）
+- ❌ 不追求基准测试第一（vs SWE-agent）
+
+#### 专注领域
+- ✅ 自进化 Agent 研究
+- ✅ TypeScript/Node.js 生态
+- ✅ 开源社区贡献
+- ✅ OpenClaw 平台集成
+
+---
+
+## 🔬 研究机会
+
+基于竞品分析，发现以下研究方向：
+
+### 1. 自进化算法优化
+**问题**: 当前自进化效率如何提升？
+**参考**: 无（SWE-agent-node 独特）
+**价值**: 高（核心竞争力）
+
+### 2. 多 Agent 协作学习
+**问题**: 多个 Agent 如何共享经验？
+**参考**: Cursor multi-agent
+**价值**: 高（可扩展性）
+
+### 3. 企业级部署模式
+**问题**: 如何支持大规模部署？
+**参考**: Cursor (NVIDIA, Salesforce)
+**价值**: 中（商业化）
+
+### 4. 基准测试方法论
+**问题**: 如何更好地评估 Agent 能力？
+**参考**: SWE-bench 生态
+**价值**: 中（研究价值）
 
 ---
 
