@@ -1,7 +1,29 @@
 # 竞品研究报告
 
 **研究日期**: 2026-02-23  
-**迭代编号**: #5
+**最后更新**: 2026-02-23 (迭代 #9)
+
+---
+
+## 🔥 最新动态 (2026-02)
+
+### mini-SWE-agent v2.0 发布
+**发布日期**: 2026-02-11  
+**这是自项目发布以来最大的更新！**
+
+#### 核心变更
+- **Tool Calls**: 原生支持 tool calling API（但仍保留文本解析）
+- **Multimodal Input**: 支持图片和其他内容类型
+- **更灵活的模型支持**: 改进的模型配置系统
+
+#### 最新版本 (v2.2.x)
+- v2.2.3 (2026-02-20): 最新修复
+- v2.2.0 (2026-02-18): 新增 ContreeEnvironment (Nebius 开发)
+- v2.1.0 (2026-02-12): 改进交互式 agent UX
+
+#### 迁移指南
+- v2 包含 breaking changes
+- 详见官方 [v2 迁移指南](https://mini-swe-agent.com/latest/advanced/v2_migration/)
 
 ---
 
@@ -24,35 +46,34 @@
 - **多语言/多模态支持**: 扩展到更多编程语言
 - **Claude 3.7 优化**: 针对新模型的 token 限制调整
 
-#### 关键设计
-- HistoryProcessor: 处理对话历史
-- 状态ful Shell: 保持终端会话
-- 复杂工具接口: 需要特定的工具调用格式
-
 ---
 
-### 2. mini-SWE-agent
+### 2. mini-SWE-agent v2
 
 **GitHub**: https://github.com/SWE-agent/mini-swe-agent  
-**定位**: SWE-agent 的极简版本
+**最新版本**: v2.2.3 (2026-02-20)
 
-#### 核心理念
-> *"What if our agent was 100x simpler, and still worked nearly as well?"*
+#### v2 核心理念
+> *"极简设计 + 原生 Tool Calling + 多模态支持"*
 
-#### 关键特性
-- 🎯 **极致简洁**: Agent 核心仅 ~100 行 Python
-- 🔨 **Bash 优先**: 唯一工具是 Bash，无需 tool-calling
-- 📊 **高性能**: SWE-bench verified >74% (Gemini 3 Pro)
-- 🚀 **快速启动**: 比 Claude Code 更快
+#### v2 新特性
+| 特性 | v1 | v2 |
+|------|----|----|
+| Action 解析 | 纯文本 | Tool Calling + 文本 |
+| 多模态 | ❌ | ✅ 图片等 |
+| 模型支持 | 有限 | 灵活配置 |
 
-#### 设计哲学
-1. **无需工具调用接口** - LM 直接使用 shell
-2. **独立进程执行** - 每个动作独立 (subprocess.run)
-3. **线性历史** - 轨迹即消息，易于调试和 fine-tuning
-4. **易于沙箱化** - 切换 subprocess.run 到 docker exec 即可
+#### 保留的设计
+- ✅ 线性历史（便于调试和 fine-tuning）
+- ✅ 独立进程执行
+- ✅ 易于沙箱化
+
+#### 新增环境
+- **ContreeEnvironment**: Nebius 开发的容器环境
+- **SwerexModalEnvironment**: Modal 云执行支持
 
 #### 用户群体
-Meta, NVIDIA, IBM, Essential AI, Princeton, Stanford 等广泛采用
+Meta, NVIDIA, IBM, Essential AI, Princeton, Stanford, Nebius 等
 
 ---
 
@@ -64,13 +85,8 @@ Meta, NVIDIA, IBM, Essential AI, Princeton, Stanford 等广泛采用
 #### 核心能力
 - 🐚 **Shell 会话管理**: 支持交互式命令 (ipython, gdb)
 - ⚡ **大规模并行**: 支持 100+ 并发 agent 运行
-- 🔒 **多平台沙箱**: Docker, AWS, Modal, Fargate
+- 🔒 **多平台沙箱**: Docker, AWS, Modal, Fargate, Contree
 - 🔌 **统一接口**: 本地和远程代码一致
-
-#### 架构优势
-- 解耦 agent 逻辑和基础设施
-- 支持非 Linux 机器
-- 简化大规模评估
 
 ---
 
@@ -86,13 +102,15 @@ Meta, NVIDIA, IBM, Essential AI, Princeton, Stanford 等广泛采用
 
 ---
 
-## 竞品对比矩阵
+## 竞品对比矩阵 (更新版)
 
-| 特性 | SWE-agent | mini-SWE-agent | SWE-agent-node |
-|------|-----------|----------------|----------------|
+| 特性 | SWE-agent | mini v2 | SWE-agent-node |
+|------|-----------|---------|----------------|
 | **语言** | Python | Python | TypeScript |
-| **核心代码** | ~5000 行 | ~100 行 | ~500 行 |
-| **工具系统** | 复杂 YAML | 仅 Bash | Bash 为主 |
+| **核心代码** | ~5000 行 | ~200 行 | ~500 行 |
+| **Tool Calling** | ✅ YAML | ✅ 原生 | ⏳ 待实现 |
+| **多模态** | ✅ | ✅ | ❌ |
+| **工具系统** | 复杂 YAML | 灵活 | Bash 为主 |
 | **历史处理** | HistoryProcessor | 线性 | 线性 |
 | **执行方式** | 状态ful Shell | 独立进程 | 独立进程 |
 | **自进化** | ❌ | ❌ | ✅ 核心特性 |
@@ -103,45 +121,39 @@ Meta, NVIDIA, IBM, Essential AI, Princeton, Stanford 等广泛采用
 
 ## 关键学习
 
-### 1. 简洁设计的重要性
-mini-SWE-agent 的成功证明：**100 行代码 + 强 LM > 复杂工具系统**
-
-> *"Make the agent so simple that the LM shines"*
-
-**应用到 SWE-agent-node**:
-- 保持 Bash 为主的设计
-- 最小化自定义工具
-- 依赖 LM 能力而非工具复杂性
-
-### 2. 独立进程执行的优势
-相比状态ful Shell，独立进程：
-- 更稳定（无会话状态问题）
-- 易于沙箱化
-- 支持大规模并行
-
-**已应用到 SWE-agent-node**: ✅ ShellEnv 使用独立进程
-
-### 3. 线性历史的价值
-- 轨迹即训练数据
-- 易于调试和分析
-- 便于 fine-tuning
-
-**已应用到 SWE-agent-node**: ✅ 线性 Step 记录
-
-### 4. 训练数据的重要性
-SWE-smith 表明：**高质量训练轨迹是关键**
+### 1. Tool Calling 的重要性
+mini-SWE-agent v2 增加原生 tool calling 支持，说明：
+- 兼容更多模型的原生能力
+- 但仍保留文本解析作为备选
 
 **应用到 SWE-agent-node**:
-- EvolutionStore 记录完整轨迹
-- 支持未来 fine-tuning
+- [ ] 实现原生 tool calling 接口
+- [ ] 保持 Bash 作为备选方案
+
+### 2. 多模态是趋势
+支持图片输入已成为标配。
+
+**应用到 SWE-agent-node**:
+- [ ] 支持截图分析
+- [ ] 支持 UI 错误图片
+
+### 3. 沙箱环境多样化
+ContreeEnvironment、Modal 等新选项。
+
+**应用到 SWE-agent-node**:
+- [ ] 调研 ContreeEnvironment
+- [ ] 支持 Modal 云执行
+
+### 4. 简洁设计仍然是核心
+即使添加了 tool calling，mini 仍保持简洁。
 
 ---
 
-## SWE-agent-node 的差异化
+## SWE-agent-node 的差异化 (更新)
 
 ### 核心优势
 
-1. **自进化能力** (独特)
+1. **自进化能力** (独特 ✨)
    - 从成功/失败中学习
    - 模式挖掘和知识积累
    - 策略自动优化
@@ -156,20 +168,23 @@ SWE-smith 表明：**高质量训练轨迹是关键**
    - Skill 系统支持
    - 沙箱环境
 
-### 待改进
+### 待实现 (基于竞品分析)
 
-1. **性能基准**: 需要在 SWE-bench 上测试
-2. **多语言支持**: 目前主要是 JS/TS
-3. **并行执行**: 需要类似 SWE-ReX 的能力
+| 优先级 | 功能 | 参考 |
+|--------|------|------|
+| P0 | 原生 Tool Calling | mini v2 |
+| P1 | 多模态支持 | mini v2 |
+| P1 | 更多沙箱选项 | SWE-ReX |
+| P2 | SWE-bench 评估 | 所有竞品 |
 
 ---
 
-## 行动建议
+## 行动建议 (更新)
 
 ### 短期 (v0.2)
+- [ ] 实现原生 tool calling 接口
 - [ ] 在 SWE-bench lite 上评估性能
-- [ ] 参考 mini-SWE-agent 简化工具系统
-- [ ] 添加更多模型支持
+- [ ] 添加多模态输入支持
 
 ### 中期 (v0.3)
 - [ ] 实现类似 SWE-ReX 的并行执行
@@ -187,6 +202,7 @@ SWE-smith 表明：**高质量训练轨迹是关键**
 
 - [SWE-agent 文档](https://swe-agent.com)
 - [mini-SWE-agent 文档](https://mini-swe-agent.com)
+- [mini-SWE-agent v2 迁移指南](https://mini-swe-agent.com/latest/advanced/v2_migration/)
 - [SWE-ReX 文档](https://swe-rex.com)
 - [SWE-smith](https://swesmith.com)
 - [SWE-bench 排行榜](https://www.swebench.com)
