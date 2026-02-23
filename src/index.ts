@@ -14,6 +14,19 @@ export { EvolutionStore } from './evolution-store'
 export { IssueParser } from './issue-parser'
 export type { ParsedIssue, IssueType, Severity, ErrorStackFrame } from './issue-parser'
 
+// 工具函数
+export {
+  retry,
+  retryWithTimeout,
+  withTimeout,
+  calculateBackoff,
+  delay,
+  isRetryableError,
+  CircuitBreaker,
+  executeBatch,
+} from './retry'
+export type { RetryConfig } from './retry'
+
 // 类型
 export * from './types'
 
