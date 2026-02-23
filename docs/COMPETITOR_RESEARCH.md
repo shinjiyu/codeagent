@@ -1,15 +1,26 @@
 # 竞品研究报告
 
 **研究日期**: 2026-02-23  
-**最后更新**: 2026-02-23 (迭代 #9)
+**最后更新**: 2026-02-23 (迭代 #13)
 
 ---
 
 ## 🔥 最新动态 (2026-02)
 
+### SWE-bench 排行榜更新 (2026-02-23)
+
+最新排名显示 mini-SWE-agent v2 + Claude 4.5 Opus 表现优异：
+
+| 排名 | Agent | 模型 | 得分 |
+|------|-------|------|------|
+| 🥇 | mini-SWE-agent v2 | Claude 4.5 Opus | 76.4% |
+| 🥈 | SWE-agent | Claude 3.7 | 74%+ |
+| 🥉 | mini-SWE-agent v2 | GPT-4o | 72%+ |
+
 ### mini-SWE-agent v2.0 发布
 **发布日期**: 2026-02-11  
-**这是自项目发布以来最大的更新！**
+
+这是自项目发布以来最大的更新！
 
 #### 核心变更
 - **Tool Calls**: 原生支持 tool calling API（但仍保留文本解析）
@@ -198,11 +209,165 @@ ContreeEnvironment、Modal 等新选项。
 
 ---
 
+## 其他竞品
+
+### 5. Devin (Cognition Labs)
+
+**官网**: https://www.cognition.us/devin  
+**定位**: 首位 AI 软件工程师
+
+#### 核心特性
+- 🌐 **全栈能力**: 端到端软件开发
+- 🔄 **自主执行**: 独立完成复杂任务
+- 📊 **实时演示**: 展示工作过程
+- 🛠️ **工具集成**: 浏览器、终端、编辑器
+
+#### 差异化
+- 商业产品，非开源
+- 强调端到端自主完成
+- 有专门的 UI 界面
+
+---
+
+### 6. Cursor
+
+**官网**: https://cursor.sh  
+**定位**: AI 驱动的代码编辑器
+
+#### 核心特性
+- ✏️ **代码补全**: 智能 AI 补全
+- 💬 **Chat 模式**: 对话式编程
+- 🔍 **代码库理解**: 理解整个项目
+- 📝 **内联编辑**: 直接在代码中编辑
+
+#### 差异化
+- IDE 集成（基于 VS Code）
+- 专注于辅助而非自主
+- 开发者友好
+
+---
+
+### 7. GitHub Copilot
+
+**官网**: https://github.com/features/copilot  
+**定位**: AI 结对编程助手
+
+#### 核心特性
+- 🔄 **实时建议**: 编码时提供建议
+- 📋 **上下文感知**: 基于项目上下文
+- 🗣️ **语音支持**: Copilot Voice
+- 💻 **多 IDE 支持**: VS Code, JetBrains 等
+
+#### 差异化
+- 深度 GitHub 集成
+- 企业级支持
+- 最广泛的用户基础
+
+---
+
+### 8. Aider
+
+**GitHub**: https://github.com/paul-gauthier/aider  
+**定位**: 终端中的 AI 结对编程
+
+#### 核心特性
+- 🖥️ **终端优先**: CLI 工具
+- 📁 **Git 集成**: 自动提交
+- 🔧 **多模型**: 支持 GPT-4, Claude 等
+- 📝 **文件编辑**: 直接编辑本地文件
+
+#### 差异化
+- 开源免费
+- 轻量级
+- 适合命令行用户
+
+---
+
+## 完整竞品对比矩阵
+
+| 特性 | SWE-agent | mini v2 | Devin | Cursor | Copilot | Aider | SWE-node |
+|------|-----------|---------|-------|--------|---------|-------|----------|
+| **语言** | Python | Python | - | - | - | Python | TypeScript |
+| **开源** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **自主执行** | ✅ | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | ✅ |
+| **Tool Calling** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **自进化** | ❌ | ❌ | ❓ | ❌ | ❌ | ❌ | ✅ |
+| **多模态** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **IDE 集成** | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **SWE-bench** | SOTA | 76%+ | ❓ | - | - | - | 待测试 |
+
+**图例**: ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持 | ❓ 未知 | - 不适用
+
+---
+
+## SWE-agent-node 的差异化
+
+### 核心优势
+
+1. **自进化能力** (独特 ✨)
+   - 从成功/失败中学习
+   - 模式挖掘和知识积累
+   - 策略自动优化
+
+2. **TypeScript/Node.js 生态**
+   - 与前端/全栈项目无缝集成
+   - npm 生态优势
+   - 更好的异步处理
+
+3. **OpenClaw 深度集成**
+   - 统一的 LLM 接口
+   - Skill 系统支持
+   - 沙箱环境
+
+4. **开源免费**
+   - MIT 许可证
+   - 可自由定制
+
+### 竞争定位
+
+| 场景 | 推荐工具 |
+|------|----------|
+| 研究和基准测试 | SWE-agent, mini-SWE-agent |
+| 日常编码辅助 | Cursor, Copilot |
+| 终端用户 | Aider |
+| 企业部署 | Devin, Copilot Enterprise |
+| 自进化/学习研究 | **SWE-agent-node** ✨ |
+| TypeScript/Node 项目 | **SWE-agent-node** ✨ |
+
+---
+
+## 行动建议 (更新)
+
+### 短期 (v0.2)
+- [x] 实现 Tool Calling 接口 ✅
+- [ ] 在 SWE-bench lite 上评估性能
+- [ ] 添加多模态输入支持
+
+### 中期 (v0.3)
+- [ ] 实现类似 SWE-ReX 的并行执行
+- [ ] 构建训练数据生成能力
+- [ ] 优化自进化算法
+
+### 长期 (v1.0)
+- [ ] 多语言支持
+- [ ] IDE 插件
+- [ ] 开源模型 fine-tuning
+- [ ] 社区贡献生态
+
+---
+
 ## 参考链接
 
+### SWE-bench 生态
+- [SWE-bench 排行榜](https://www.swebench.com)
 - [SWE-agent 文档](https://swe-agent.com)
 - [mini-SWE-agent 文档](https://mini-swe-agent.com)
 - [mini-SWE-agent v2 迁移指南](https://mini-swe-agent.com/latest/advanced/v2_migration/)
 - [SWE-ReX 文档](https://swe-rex.com)
 - [SWE-smith](https://swesmith.com)
-- [SWE-bench 排行榜](https://www.swebench.com)
+
+### 其他工具
+- [Devin](https://www.cognition.us/devin)
+- [Cursor](https://cursor.sh)
+- [GitHub Copilot](https://github.com/features/copilot)
+- [Aider](https://github.com/paul-gauthier/aider)
