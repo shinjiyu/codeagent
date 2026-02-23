@@ -11,6 +11,8 @@ export { CodeSearch } from './code-search'
 export { CodeModifier, createModificationFromSnippet, createFileModification, deleteFileModification } from './code-modifier'
 export { LLMClient, BUILTIN_TOOLS } from './llm-client'
 export { EvolutionStore } from './evolution-store'
+export { IssueParser } from './issue-parser'
+export type { ParsedIssue, IssueType, Severity, ErrorStackFrame } from './issue-parser'
 
 // 类型
 export * from './types'
