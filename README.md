@@ -95,8 +95,14 @@ console.log(solution.summary)
 
 - [项目目标](./PROJECT.md) - 愿景和设计原则
 - [架构设计](./ARCHITECTURE.md) - 详细的架构说明
+- [API 文档](./docs/API.md) - 完整的 API 参考
 - [路线图](./ROADMAP.md) - 开发计划和里程碑
 - [进度追踪](./PROGRESS.md) - 当前状态和进展
+
+## 🧪 示例
+
+- [基础使用](./examples/basic-usage.ts) - 快速上手示例
+- [进化学习](./examples/evolution-learning.ts) - 自进化功能示例
 
 ## 🏗️ 架构概览
 
