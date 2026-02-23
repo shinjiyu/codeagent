@@ -10,6 +10,8 @@
 - [ShellEnv](#shellenv)
 - [CodeSearch](#codesearch)
 - [CodeModifier](#codemodifier)
+- [LLMClient](#llmclient)
+- [IssueParser](#issueparser)
 - [EvolutionStore](#evolutionstore)
 - [类型定义](#类型定义)
 
@@ -516,6 +518,101 @@ interface ToolDefinition {
     };
   };
 }
+```
+
+---
+
+## IssueParser
+
+Issue 解析器，从问题中提取结构化信息。
+
+### 构造函数
+
+```typescript
+new IssueParser()
+```
+
+### 方法
+
+#### `parse(issue: Issue): ParsedIssue`
+
+解析 Issue，提取结构化信息。
+
+```typescript
+import { IssueParser } from 'swe-agent-node';
+
+const parser = new IssueParser();
+const parsed = parser.parse({
+  id: 'issue-1',
+  title: 'Fix TypeError in login',
+  body: `
+Error at login (src/auth.ts:42:10)
+The TypeError occurs when users try to login.
+  `,
+  labels: ['bug'],
+});
+
+console.log(parsed.parsed?.type);        // 'bug'
+console.log(parsed.parsed?.severity);    // 'medium'
+console.log(parsed.parsed?.mentionedFiles); // ['src/auth.ts']
+console.log(parsed.parsed?.errorStack);  // [{ file: 'src/auth.ts', line: 42, ... }]
+```
+
+#### `parseGitHubUrl(url: string): { owner: string; repo: string; number: number } | null`
+
+解析 GitHub Issue URL。
+
+```typescript
+const result = parser.parseGitHubUrl('https://github.com/owner/repo/issues/123');
+// { owner: 'owner', repo: 'repo', number: 123 }
+```
+
+### 解析结果
+
+`ParsedIssue.parsed` 包含：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | IssueType | 问题类型：bug/feature/enhancement/documentation/question/unknown |
+| `severity` | Severity | 严重程度：critical/high/medium/low/unknown |
+| `errorStack` | ErrorStackFrame[] | 提取的错误堆栈 |
+| `mentionedFiles` | string[] | 提及的文件路径 |
+| `mentionedFunctions` | string[] | 提及的函数名 |
+| `mentionedClasses` | string[] | 提及的类名 |
+| `codeSnippets` | string[] | 代码片段 |
+| `suspectedAreas` | string[] | 推断的可能修复区域 |
+| `confidence` | number | 解析置信度 (0-1) |
+
+### 支持的错误堆栈格式
+
+- **JavaScript/TypeScript**: `at function (file:line:column)`
+- **Python**: `File "path", line N, in function`
+
+### 示例
+
+```typescript
+import { IssueParser } from 'swe-agent-node';
+
+const parser = new IssueParser();
+
+const result = parser.parse({
+  id: '123',
+  title: 'Critical: App crashes on startup',
+  body: `
+Stack trace:
+  at init (src/index.ts:10:5)
+  at main (src/main.ts:25:10)
+
+The crash happens in UserService when loading config.
+  `,
+  labels: ['bug', 'critical'],
+});
+
+// result.parsed.type === 'bug'
+// result.parsed.severity === 'critical'
+// result.parsed.mentionedFiles.includes('src/index.ts')
+// result.parsed.mentionedClasses.includes('UserService')
+// result.parsed.suspectedAreas.includes('config')
 ```
 
 ---

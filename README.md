@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-126%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/Tests-165%20passed-brightgreen.svg)](./tests)
 
 **SWE-Agent-Node** 是一个受 [SWE-agent](https://github.com/SWE-agent/SWE-agent) 启发的 AI 编程助手，能够自主修复 GitHub Issues、改进代码质量，并从经验中持续学习。
 
@@ -107,6 +107,7 @@ console.log(solution.summary)
 - [基础使用](./examples/basic-usage.ts) - 快速上手示例
 - [进化学习](./examples/evolution-learning.ts) - 自进化功能示例
 - [Tool Calling](./examples/tool-calling.ts) - 工具调用功能示例
+- [Issue 解析](./examples/issue-parsing.ts) - 问题解析功能示例
 - [完整工作流](./examples/full-workflow.ts) - 从问题到修复的完整流程
 
 ## 🏗️ 架构概览
@@ -231,13 +232,15 @@ npm run build
 |------|---------|
 | 类型定义 | 22 |
 | 进化存储 | 20 |
+| Issue 解析器 | 23 |
 | 代码搜索 | 17 |
 | Shell 环境 | 18 |
 | LLM 客户端 | 13 |
 | Git 环境 | 13 |
 | Agent | 13 |
+| CLI 工具 | 16 |
 | 代码修改 | 10 |
-| **总计** | **126** |
+| **总计** | **165** |
 
 ## 📋 路线图
 
