@@ -388,6 +388,138 @@ const mod = deleteFileModification('src/old-file.ts');
 
 ---
 
+## LLMClient
+
+LLM 客户端，支持 Tool Calling 和多轮对话。
+
+### 构造函数
+
+```typescript
+new LLMClient(config: LLMConfig)
+```
+
+### Tool Calling
+
+#### `registerTool(tool: Tool): void`
+
+注册单个工具。
+
+```typescript
+const llm = new LLMClient({ model: 'gpt-4' });
+
+llm.registerTool({
+  name: 'read_file',
+  description: '读取文件内容',
+  parameters: [
+    { name: 'path', type: 'string', required: true, description: '文件路径' }
+  ],
+  execute: async (params) => {
+    const fs = await import('fs');
+    return { content: fs.readFileSync(params.path, 'utf-8') };
+  }
+});
+```
+
+#### `registerTools(tools: Tool[]): void`
+
+批量注册工具。
+
+```typescript
+import { LLMClient, BUILTIN_TOOLS } from 'swe-agent-node';
+
+const llm = new LLMClient({ model: 'gpt-4' });
+llm.registerTools(BUILTIN_TOOLS);
+```
+
+#### `executeToolCall(toolCall: ToolCall): Promise<string>`
+
+执行工具调用。
+
+```typescript
+const result = await llm.executeToolCall({
+  id: 'call-123',
+  type: 'function',
+  function: {
+    name: 'read_file',
+    arguments: '{"path": "src/index.ts"}'
+  }
+});
+```
+
+### 生成响应
+
+#### `generate(prompt: string, context?: Context): Promise<string>`
+
+生成响应（自动处理 Tool Calling 循环）。
+
+```typescript
+const response = await llm.generate('分析 src/index.ts 文件的结构');
+```
+
+#### `generateSimple(prompt: string, context?: Context): Promise<string>`
+
+生成响应（不使用 Tool Calling）。
+
+```typescript
+const response = await llm.generateSimple('什么是 TypeScript？');
+```
+
+### 内置工具
+
+```typescript
+import { BUILTIN_TOOLS } from 'swe-agent-node';
+
+// read_file - 读取文件
+// write_file - 写入文件
+// run_command - 执行命令
+// search_code - 搜索代码
+```
+
+### 其他方法
+
+#### `clearHistory(): void`
+
+清空对话历史。
+
+#### `getToolDefinitions(): ToolDefinition[]`
+
+获取已注册的工具定义列表。
+
+### 类型定义
+
+```typescript
+interface Tool {
+  name: string;
+  description: string;
+  parameters?: ToolParameter[];
+  execute: (params: any) => Promise<any>;
+}
+
+interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string; // JSON string
+  };
+}
+
+interface ToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, { type: string; description: string }>;
+      required?: string[];
+    };
+  };
+}
+```
+
+---
+
 ## EvolutionStore
 
 自进化存储系统，管理轨迹、模式、知识和策略。
