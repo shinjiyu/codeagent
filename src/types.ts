@@ -270,8 +270,21 @@ export interface EvolutionConfig {
 // ==================== LLM 相关 ====================
 
 export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant'
+  role: 'system' | 'user' | 'assistant' | 'tool'
   content: string
+  /** Tool call ID (for tool role messages) */
+  toolCallId?: string
+  /** Tool calls made by assistant */
+  toolCalls?: ToolCall[]
+}
+
+export interface ToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string // JSON string
+  }
 }
 
 export interface LLMRequest {
@@ -279,6 +292,10 @@ export interface LLMRequest {
   temperature?: number
   maxTokens?: number
   stopSequences?: string[]
+  /** Available tools for the model to call */
+  tools?: ToolDefinition[]
+  /** Force tool calling: 'auto' | 'none' | required tool names */
+  toolChoice?: 'auto' | 'none' | string | string[]
 }
 
 export interface LLMResponse {
@@ -290,6 +307,25 @@ export interface LLMResponse {
   }
   model: string
   finishReason: string
+  /** Tool calls made by the assistant */
+  toolCalls?: ToolCall[]
+}
+
+export interface ToolDefinition {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: {
+      type: 'object'
+      properties: Record<string, {
+        type: string
+        description: string
+        enum?: string[]
+      }>
+      required?: string[]
+    }
+  }
 }
 
 // ==================== Tool 相关 ====================

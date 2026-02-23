@@ -9,7 +9,7 @@ export { GitEnv } from './git-env'
 export { ShellEnv } from './shell-env'
 export { CodeSearch } from './code-search'
 export { CodeModifier, createModificationFromSnippet, createFileModification, deleteFileModification } from './code-modifier'
-export { LLMClient } from './llm-client'
+export { LLMClient, BUILTIN_TOOLS } from './llm-client'
 export { EvolutionStore } from './evolution-store'
 
 // 类型
