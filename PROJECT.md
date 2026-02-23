@@ -59,14 +59,24 @@
 
 ## 与原版 SWE-agent 的对比
 
-| 特性 | SWE-agent (Python) | SWE-agent-node |
-|------|-------------------|----------------|
-| 核心代码量 | ~5000 行 | ~500 行 (目标) |
-| 工具系统 | 复杂 YAML 配置 | 简单 Bash 为主 |
-| 历史处理 | HistoryProcessor | 线性历史 |
-| 执行方式 | 状态ful Shell | 独立进程 |
-| 自进化 | ❌ | ✅ 核心特性 |
-| OpenClaw 集成 | ❌ | ✅ 深度集成 |
+> 📋 **详细竞品分析**: 参见 [竞品研究报告](./docs/COMPETITOR_RESEARCH.md)
+
+| 特性 | SWE-agent (Python) | mini-SWE-agent | SWE-agent-node |
+|------|-------------------|----------------|----------------|
+| 核心代码量 | ~5000 行 | ~100 行 | ~500 行 (目标) |
+| 工具系统 | 复杂 YAML 配置 | 仅 Bash | 简单 Bash 为主 |
+| 历史处理 | HistoryProcessor | 线性历史 | 线性历史 |
+| 执行方式 | 状态ful Shell | 独立进程 | 独立进程 |
+| SWE-bench | SOTA | 74%+ | 待测试 |
+| 自进化 | ❌ | ❌ | ✅ 核心特性 |
+| OpenClaw 集成 | ❌ | ❌ | ✅ 深度集成 |
+
+### 竞品最新动态 (2026-02)
+
+- **SWE-agent v1.1.0**: 集成 SWE-smith 训练数据生成，发布 SWE-agent-LM-32b 开源模型
+- **mini-SWE-agent**: 100 行代码实现 74%+ SWE-bench verified，被 Meta/NVIDIA/IBM 等采用
+- **SWE-ReX**: 大规模并行沙箱执行框架，支持 100+ 并发 agent
+- **关键趋势**: 简洁设计 + 强 LM > 复杂工具系统
 
 ## 成功指标
 
