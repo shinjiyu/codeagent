@@ -19,6 +19,40 @@
 - 🔍 **智能搜索**: 多维度代码搜索（关键词、函数、类、错误信息）
 - 🔄 **安全回滚**: 自动备份和回滚机制
 
+### 🎛️ 自主性控制系统 ⭐ NEW
+
+**4 级自主性设计**，基于 Cursor 的 "autonomy slider" 概念：
+
+```
+Level 0 - SUGGEST (仅建议)
+└─ Agent 只提供建议，所有决策由人类做出
+
+Level 1 - ASSIST (辅助编辑) [默认]
+└─ Agent 可以执行操作，危险操作需要确认
+
+Level 2 - AUTO (自动执行)
+└─ Agent 自动执行，支持回滚机制
+
+Level 3 - AUTONOMOUS (完全自主)
+└─ Agent 完全自主执行，事后验证
+```
+
+**使用示例**:
+```typescript
+import { Agent, AutonomyLevel } from 'swe-agent-node';
+
+// 使用 AUTO 级别
+const agent = new Agent({
+  autonomy: {
+    level: AutonomyLevel.AUTO,
+    maxAutoSteps: 50,
+    enableSafetyBoundaries: true,
+  }
+});
+```
+
+详见：[自主性系统使用指南](./docs/AUTONOMY_GUIDE.md)
+
 ### 2.0 增强特性 (自我进化)
 
 #### 📖 ACE - 剧本演化
@@ -56,6 +90,7 @@
 
 | 文档 | 描述 |
 |------|------|
+| **[自主性系统指南](./docs/AUTONOMY_GUIDE.md)** ⭐ | **4 级自主性控制详解** |
 | [Tool Factory](./docs/TOOL_FACTORY.md) | 运行时工具合成 |
 | [Context Engineer](./docs/CONTEXT_ENGINEER.md) | Prompt 演化系统 |
 | [Code Evolver](./docs/CODE_EVOLVER.md) | 源码自我修改 |
@@ -107,6 +142,38 @@ console.log(result.success ? '✅ 修复成功' : '❌ 修复失败')
 ```
 
 ### 2.0 新功能示例
+
+#### 自主性系统 🎛️
+
+```typescript
+import { Agent, AutonomyLevel } from 'swe-agent-node'
+
+// Level 1 - ASSIST (默认)
+const agent = new Agent({
+  autonomy: {
+    level: AutonomyLevel.ASSIST, // 危险操作需要确认
+  }
+})
+
+// Level 2 - AUTO (自动执行，支持回滚)
+const autoAgent = new Agent({
+  autonomy: {
+    level: AutonomyLevel.AUTO,
+    maxAutoSteps: 50,
+    autoRollbackTimeout: 600000, // 10 分钟
+  }
+})
+
+// Level 3 - AUTONOMOUS (完全自主)
+const autonomousAgent = new Agent({
+  autonomy: {
+    level: AutonomyLevel.AUTONOMOUS,
+    maxAutoSteps: 100,
+  }
+})
+```
+
+详见：[自主性系统使用指南](./docs/AUTONOMY_GUIDE.md)
 
 #### ACE - Prompt 演化
 
@@ -278,6 +345,9 @@ npm run build
 项目包含多个示例，帮助快速上手：
 
 ```bash
+# 自主性系统示例 ⭐ NEW
+npx ts-node examples/autonomy-example.ts
+
 # 基础用法
 npx ts-node examples/basic-usage.ts
 
@@ -292,6 +362,9 @@ npx ts-node examples/issue-parsing.ts
 
 # 工具调用
 npx ts-node examples/tool-calling.ts
+
+# 测试指南
+npx ts-node examples/testing-guide.ts
 ```
 
 ## 📊 与 SWE-agent 的区别
@@ -300,6 +373,7 @@ npx ts-node examples/tool-calling.ts
 |------|-----------|-------------------|
 | 语言 | Python | TypeScript |
 | 核心代码 | ~5000 行 | ~500 行 |
+| **自主性控制** ⭐ | ❌ | **✅ 4 级系统** |
 | **Prompt 演化** | ❌ | ✅ ACE |
 | **动态工具** | ❌ | ✅ Tool Factory |
 | **自我修改** | ❌ | ✅ Code Evolver |

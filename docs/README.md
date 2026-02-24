@@ -37,22 +37,20 @@
 
 ## 🎯 功能模块文档
 
-### 自进化功能
+### 自主性系统 ⭐ NEW
 
 | 文档 | 描述 | 实现状态 | 优先级 |
 |------|------|---------|--------|
-| [CONTEXT_ENGINEER.md](./CONTEXT_ENGINEER.md) | ACE - Prompt 演化系统 | 🔄 设计完成 | P0 |
-| [TOOL_FACTORY.md](./TOOL_FACTORY.md) | Live-SWE - 运行时工具合成 | 🔄 设计完成 | P1 |
-| [CODE_EVOLVER.md](./CODE_EVOLVER.md) | SICA - 源码自我修改 | 🔄 设计完成 | P3 |
-| [RL_LOOP.md](./RL_LOOP.md) | AgentEvolver - 强化学习闭环 | 🔄 设计完成 | P2 |
+| **[自主性系统指南](./AUTONOMY_GUIDE.md)** ⭐ | **4 级自主性控制详解** | ✅ **已完成** | **P0** |
 
-### 每个模块包含
+### 其他功能模块
 
-- ✅ 核心概念和原理
-- ✅ 技术实现细节
-- ✅ 代码示例
-- ✅ PoC 演示
-- ✅ 安全考虑
+| 文档 | 描述 | 实现状态 | 优先级 |
+|------|------|---------|--------|
+| [Context Engineer](./CONTEXT_ENGINEER.md) | Prompt 演化系统 | 🔄 设计完成 | P0 |
+| [Tool Factory](./TOOL_FACTORY.md) | 运行时工具合成 | 🔄 设计完成 | P1 |
+| [Code Evolver](./CODE_EVOLVER.md) | 源码自我修改 | 🔄 设计完成 | P3 |
+| [RL Loop](./RL_LOOP.md) | 强化学习闭环 | 🔄 设计完成 | P2 |
 
 ---
 
@@ -62,8 +60,11 @@
 
 | 文档 | 描述 | 日期 |
 |------|------|------|
-| [ITERATION_REPORT_2026-02-24.md](../ITERATION_REPORT_2026-02-24.md) | 迭代 #23 - 测试覆盖率提升 | 2026-02-24 |
-| [ITERATION_SUMMARY.md](./ITERATION_SUMMARY.md) | 迭代过程总结 | 2026-02-24 |
+| [迭代 #28](../ITERATION_REPORT_28_2026-02-24.md) | 自主性系统文档完善 | 2026-02-24 |
+| [迭代 #27](../ITERATION_REPORT_27_2026-02-24.md) | Agent 集成测试 | 2026-02-24 |
+| [迭代 #26](../ITERATION_REPORT_26_2026-02-24.md) | 自主性系统实现 | 2026-02-24 |
+| [迭代 #25](../ITERATION_REPORT_25_2026-02-24.md) | 竞品研究 | 2026-02-24 |
+| [迭代总结](./ITERATION_SUMMARY.md) | 迭代过程总结 | 2026-02-24 |
 
 ### 里程碑
 
@@ -79,6 +80,7 @@
 
 | 文件 | 描述 | 难度 |
 |------|------|------|
+| **[autonomy-example.ts](../examples/autonomy-example.ts)** ⭐ | **自主性系统完整示例** | ⭐⭐ 中级 |
 | [basic-usage.ts](../examples/basic-usage.ts) | 基础使用示例 | ⭐ 初级 |
 | [full-workflow.ts](../examples/full-workflow.ts) | 完整工作流示例 | ⭐⭐ 中级 |
 | [evolution-learning.ts](../examples/evolution-learning.ts) | 进化学习示例 | ⭐⭐ 中级 |
@@ -88,6 +90,10 @@
 
 运行示例：
 ```bash
+# 自主性系统示例
+npx ts-node examples/autonomy-example.ts
+
+# 其他示例
 npx ts-node examples/basic-usage.ts
 ```
 
@@ -97,9 +103,9 @@ npx ts-node examples/basic-usage.ts
 
 ### 测试统计
 
-- **测试套件**: 13 个
-- **测试用例**: 231 个
-- **覆盖率**: 70%+
+- **测试套件**: 16 个
+- **测试用例**: 302 个
+- **覆盖率**: 71.5%+
 - **通过率**: 100%
 
 ### 测试文件
@@ -108,8 +114,10 @@ npx ts-node examples/basic-usage.ts
 
 | 文件 | 描述 | 用例数 |
 |------|------|--------|
+| **autonomy.test.ts** | **自主性系统测试** | **20** |
+| **agent-autonomy.test.ts** | **Agent 集成测试** | **25** |
+| **agent-helpers.test.ts** | **Agent 辅助测试** | **26** |
 | agent.test.ts | Agent 核心测试 | 8 |
-| agent-coverage.test.ts | Agent 覆盖率测试 | 23 |
 | code-search.test.ts | 代码搜索测试 | 15 |
 | code-modifier.test.ts | 代码修改测试 | 20 |
 | git-env.test.ts | Git 环境测试 | 18 |
@@ -168,6 +176,8 @@ npm test -- --coverage
 
 ### 我想了解...
 
+- **如何使用自主性系统** → [自主性系统指南](./AUTONOMY_GUIDE.md) ⭐
+- **自主性示例代码** → [examples/autonomy-example.ts](../examples/autonomy-example.ts) ⭐
 - **如何安装使用** → [README.md](../README.md) → 快速开始
 - **API 使用方法** → [API.md](./API.md)
 - **如何编写测试** → [examples/testing-guide.ts](../examples/testing-guide.ts)
