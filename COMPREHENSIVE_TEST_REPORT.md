@@ -9,41 +9,160 @@
 
 | 测试类型 | 测试数 | 通过 | 失败 | 通过率 |
 |---------|-------|------|------|--------|
-| **单元测试 (Jest)** | 302 | 302 | 0 | 100.0% |
-| **实战测试 (Practical)** | 87 | 87 | 0 | 100.0% |
-| **合计** | **389** | **389** | **0** | **100.0%** |
+| **项目自带单元测试 (Jest)** | 302 | 302 | 0 | 100.0% |
+| **代码分析设计测试 (deep-analysis)** | 58 | 58 | 0 | 100.0% |
+| **合计** | **360** | **360** | **0** | **100.0%** |
 
 ---
 
-## 🧪 一、单元测试报告
+## 🔬 一、现有测试评估
 
-### 执行命令
-```bash
-npx jest --coverage --verbose
-```
+### 现有测试的优点
+- 类型定义（types.test.ts）覆盖全面：20 个测试覆盖所有接口
+- 自主性系统测试充分：3 个文件共 67 个测试覆盖 4 个级别和各种配置组合
+- IssueParser 测试详细：23 个测试覆盖各种 Issue 类型和解析场景
+- Retry 工具测试扎实：24 个测试覆盖重试、超时、断路器、批量执行
 
-### 测试结果：16 个测试套件全部通过
+### 现有测试的关键盲区
+| 模块 | 覆盖率 | 核心遗漏 |
+|------|--------|---------|
+| **agent.ts** | 12.5% | `solve()` 流水线从未被调用，6 个内部步骤全部未测 |
+| **llm-client.ts** | 50% | `generate()` 的工具调用循环、`suggestFix()` 的 JSON fallback、`analyzeCode()` 未测 |
+| **code-modifier.ts** | 66% | 模糊匹配（`fuzzyReplace`/`normalizeContent`）、`cleanup()`、覆盖已有文件未测 |
+| **git-env.ts** | 67% | `clone()`、`push()` 未测 |
+| **evolution-store.ts** | 78% | `extractKnowledgeFromSuccess()`、`optimizeStrategy()` 未测 |
 
-| 测试套件 | 测试数 | 状态 |
-|---------|-------|------|
-| agent.test.ts | 13 | ✅ |
-| agent-autonomy.test.ts | 21 | ✅ |
-| agent-coverage.test.ts | 23 | ✅ |
-| agent-helpers.test.ts | 26 | ✅ |
-| autonomy.test.ts | 20 | ✅ |
-| cli.test.ts | 16 | ✅ |
-| code-modifier.test.ts | 12 | ✅ |
-| code-search.test.ts | 18 | ✅ |
-| evolution-store.test.ts | 19 | ✅ |
-| execution-planner.test.ts | 19 | ✅ |
-| git-env.test.ts | 13 | ✅ |
-| issue-parser.test.ts | 23 | ✅ |
-| llm-client.test.ts | 13 | ✅ |
-| retry.test.ts | 24 | ✅ |
-| shell-env.test.ts | 18 | ✅ |
-| types.test.ts | 20 | ✅ |
+### 评估结论
+项目自带的 302 个测试在**类型安全性**和**单个模块的基础功能**上覆盖不错，但在以下维度有严重不足：
+1. **核心业务流程**：Agent.solve() 作为整个系统的核心入口，覆盖率仅 12.5%
+2. **分支覆盖**：代码中的 else 分支、错误处理路径、边界条件大量未覆盖
+3. **集成测试**：各模块之间的交互和数据传递没有端到端测试
+4. **回归保护**：模糊匹配、JSON parse fallback 等关键逻辑路径未被测试保护
 
-### 覆盖率
+---
+
+## 🧪 二、代码分析设计的测试用例 (deep-analysis.test.ts)
+
+### 设计方法论
+1. **逐行阅读源码**，标记每个分支/路径是否被现有测试覆盖
+2. **识别业务逻辑的关键决策点**（if/else、try/catch、循环终止条件）
+3. **设计测试用例针对未覆盖的路径**，而非简单重复现有测试
+4. **模拟真实使用场景**，如在真实代码库上运行 Agent.solve()
+
+### 测试用例详解
+
+#### 1. Agent.solve() 核心流水线（7 个测试）
+
+**为什么需要这些测试：** 
+Agent.solve() 是整个系统的入口点，依次调用 parseIssue→analyzeRepo→searchCode→generateFix→applyModifications→runTests→commitChanges。现有测试只测了 Agent 的构造函数，从未真正执行过这个流水线。
+
+| 测试 | 验证的代码路径 | 对应源码行 |
+|------|--------------|-----------|
+| 步骤执行顺序 | `solve()` 内部按顺序调用 6 个步骤 | agent.ts:70-115 |
+| 关键词提取过滤停用词 | `extractKeywords()` 的停用词过滤逻辑 | agent.ts:446-453 |
+| 错误堆栈提取 | `extractErrorTrace()` 的正则匹配 | agent.ts:456-461 |
+| 搜索结果去重 | `searchCode()` 的 `seen.has(key)` 去重 | agent.ts:300-307 |
+| 错误处理 | `catch` 块设置 trajectory.result | agent.ts:141-149 |
+| Evolution 不崩溃 | `finally` 块的 `saveTrajectory()` + `learn()` | agent.ts:150-161 |
+| 事件结构完整 | `executeStep()` 的 Step 对象构建 | agent.ts:206-214 |
+
+#### 2. CodeModifier 模糊匹配（8 个测试）
+
+**为什么需要这些测试：** 
+当精确字符串匹配失败时，CodeModifier 会使用 `normalizeContent()` 进行空白归一化后再匹配，再用 `fuzzyReplace()` 做行级替换。这是修改代码时的关键容错机制，但完全没有被测试覆盖。
+
+| 测试 | 验证的代码路径 | 对应源码行 |
+|------|--------------|-----------|
+| 模糊匹配（空白差异） | `normalizeContent()` + `fuzzyReplace()` | code-modifier.ts:100-108 |
+| 精确+模糊都失败抛错 | `throw new Error('Old content not found')` | code-modifier.ts:109-110 |
+| 无 oldContent 覆盖写入 | `if (!oldContent)` 直接覆盖分支 | code-modifier.ts:112-115 |
+| 已存在文件的 create | `if (fs.existsSync(filePath))` 备份分支 | code-modifier.ts:65-67 |
+| cleanup() | 清除 modifications + 删除备份目录 | code-modifier.ts:186-191 |
+| rollback 删除新文件 | `if (originalContent === '')` 删除分支 | code-modifier.ts:163-165 |
+| 多次修改回滚到初始 | `!this.modifications.has(filePath)` 首次备份 | code-modifier.ts:145-147 |
+| 删除不存在的文件 | `if (!fs.existsSync(filePath)) return` | code-modifier.ts:122-124 |
+
+#### 3. CodeSearch 正则和边界（7 个测试）
+
+**为什么需要这些测试：**
+searchFunction 使用 `\)\s*{` 正则匹配方法定义，但 TypeScript 的返回类型注解 `: Promise<T>` 出现在 `)` 和 `{` 之间，导致匹配失败。这是一个通过代码审查发现的真实 bug。
+
+| 测试 | 验证的代码路径 |
+|------|--------------|
+| TS 返回类型正则限制 | `searchFunction` 的第 3 个正则 |
+| 正则特殊字符转义 | `escapeRegex()` 对 `[](){}` 的处理 |
+| 权重排序 | `calculateScore()` 对函数名的额外加权 |
+| 空目录搜索 | `getSourceFiles()` 返回空数组 |
+| 行数越界截断 | `getSnippet()` 的 `Math.min(endLine, lines.length)` |
+| 未知扩展名 | `detectLanguage()` 的 `langMap[ext] \|\| 'text'` |
+| class extends 匹配 | `searchClass` 的正则匹配 extends |
+
+#### 4. LLMClient 生成和解析（4 个测试）
+
+**为什么需要这些测试：**
+`suggestFix()` 方法期望 LLM 返回 JSON，但当 LLM 返回纯文本时需要走 `catch` 块构建 fallback 结构。这个容错路径对鲁棒性至关重要，但完全没有被测试。
+
+| 测试 | 验证的代码路径 |
+|------|--------------|
+| analyzeCode 调用 | `generate(prompt, { task: 'code-analysis' })` |
+| suggestFix JSON fallback | `try { JSON.parse } catch { return fallback }` |
+| generateCommitMessage | commit message 生成流程 |
+| 无效 JSON 工具参数 | `JSON.parse(arguments)` 的 catch 块 |
+
+#### 5. EvolutionStore 知识提取和策略优化（7 个测试）
+
+**为什么需要这些测试：**
+`extractKnowledgeFromSuccess()` 和 `optimizeStrategy()` 是自进化系统的核心能力，分别负责从成功经验中学习和优化搜索策略。它们的覆盖率为 0%。
+
+| 测试 | 验证的代码路径 |
+|------|--------------|
+| 从成功轨迹提取知识 | `createKnowledgeFromTrajectory()` |
+| 不从失败轨迹提取 | `if (!trajectory.result.success) return null` |
+| 知识去重 | `isDuplicateKnowledge()` |
+| 策略优化 | `optimizeStrategy()` 的权重更新 |
+| 空步骤不提取模式 | `extractSuccessPattern()` 的 `if (steps.length === 0) return null` |
+| 失败模式提取 | `extractFailurePattern()` 的失败步骤查找 |
+| 类别过滤 | `searchKnowledge(query, category)` 的 `results.filter(k => k.category === category)` |
+
+#### 6-11. 其他模块深度测试
+
+- **IssueParser**（6 个）：置信度计算的高/低场景、类名过滤、多区域推断、URL 解析容错、函数名关键字过滤
+- **ShellEnv**（3 个）：parseTestResult 的 Jest 输出解析分支、默认 failed=1 回退、命令不存在处理
+- **Autonomy**（4 个）：ASSIST 非确认操作允许、canRollback 条件、步数等于限制的边界、safetyBoundaries=false
+- **ExecutionPlanner**（4 个）：critical 优先级映射、依赖未完成阻塞、skipped 视为完成、全 pending 进度
+- **Retry**（5 个）：shouldRetry=false 不重试、onRetry 回调参数、CircuitBreaker half-open→closed、concurrency 限制、错误分类
+- **跨模块集成**（3 个）：Parser→Planner 全流程、Search→Modifier→Rollback 全流程、EvolutionStore 多轨迹挖掘+学习
+
+---
+
+## 🐛 三、通过测试发现的问题
+
+### P1 - 重要问题
+| # | 模块 | 描述 | 发现方式 |
+|---|------|------|---------|
+| 1 | agent.ts | `commitTemplate` 使用 `{issue}` 占位符但替换时用 `{message}`/`{issue_id}`，导致 commit 消息不正确 | 代码审查 + solve 流水线测试 |
+| 2 | agent.ts | `step.duration` 在事件中作为 `event.data.duration` 传递，但实际传的是 `step` 对象，CLI 显示 `undefinedms` | 事件结构测试 |
+| 3 | ESLint | 项目无 `.eslintrc` 配置文件 | 直接运行发现 |
+
+### P2 - 一般问题
+| # | 模块 | 描述 | 发现方式 |
+|---|------|------|---------|
+| 4 | code-search.ts | `searchFunction` 正则 `\)\s*{` 无法匹配 `): Promise<T> {` 形式 | 正则分析 + 测试验证 |
+| 5 | agent.ts | `generateFix()` 返回空数组，整个修复流程实际不产生修改 | 代码审查 |
+| 6 | llm-client.ts | `callLLM()` 返回 mock 数据 | 代码审查 |
+| 7 | examples/basic-usage.ts | 缺少 `maxKnowledgeSize` 字段 | 运行测试发现 |
+
+### P3 - 建议改进
+| # | 模块 | 描述 | 发现方式 |
+|---|------|------|---------|
+| 8 | code-modifier.ts | `fuzzyReplace` 找不到行级匹配时直接追加内容 | 代码审查 |
+| 9 | evolution-store.ts | `load()` 加载损坏 JSON 时抛异常无容错 | 边缘测试 |
+
+---
+
+## 📈 四、覆盖率分析
+
+### 单元测试覆盖率（项目自带 302 个测试）
 
 | 文件 | 语句 | 分支 | 函数 | 行 |
 |------|------|------|------|-----|
@@ -60,207 +179,22 @@ npx jest --coverage --verbose
 | retry.ts | 89.89% | 77.08% | 83.33% | 89.47% |
 | shell-env.ts | 81.03% | 58.13% | 90% | 81.03% |
 
----
+### 新增 deep-analysis 测试补充覆盖的路径
 
-## 🔬 二、实战测试报告
-
-### 执行命令
-```bash
-npx ts-node tests/practical-test.ts
-```
-
-### 测试结果：15 个模块 87 个实战测试全部通过
-
-#### 📋 IssueParser（6/6 ✅）
-对真实 Issue 场景进行解析测试：
-- ✅ 解析包含错误堆栈的 Bug Issue → type=bug, severity=critical, confidence=0.90
-- ✅ 解析功能请求 → type=feature, 提取类名 ThemeProvider
-- ✅ 解析 GitHub URL → owner/repo/number 正确提取
-- ✅ 解析增强请求 → type=enhancement
-- ✅ 解析文档类 Issue → type=documentation
-- ✅ 边缘情况：空 body → 正确处理
-
-#### 🔍 CodeSearch（8/8 ✅）
-对真实代码库进行搜索测试：
-- ✅ 关键词搜索 "Agent" → 找到 10 个位置
-- ✅ 类搜索 Agent → 在 agent.ts:38 找到定义
-- ✅ 函数搜索 solve → 发现已知限制：正则不支持 TS 返回类型注解
-- ✅ 错误信息搜索 → 在 5 个位置找到
-- ✅ 代码片段提取 → 正确提取 10 行 TypeScript
-- ✅ 文件查找 → 找到 42 个 TypeScript 文件
-- ✅ 多关键词搜索 → 找到 5 个位置
-- ✅ 类搜索 CodeSearch → 找到 1 个定义
-
-#### ✏️ CodeModifier（8/8 ✅）
-使用临时目录进行文件操作测试：
-- ✅ 创建新文件
-- ✅ 精确匹配修改文件
-- ✅ 删除文件
-- ✅ 修改后回滚 → 内容完全恢复
-- ✅ 创建嵌套目录文件
-- ✅ 修改预览
-- ✅ createFileModification 辅助函数
-- ✅ deleteFileModification 辅助函数
-
-#### 🧬 EvolutionStore（7/7 ✅）
-自进化系统的完整生命周期测试：
-- ✅ 保存和检索执行轨迹 → 2 步轨迹
-- ✅ 模式挖掘 → 从轨迹中挖掘出 1 个模式
-- ✅ 知识搜索 → 搜索 "login" 找到 1 条知识
-- ✅ 模式匹配 → 匹配到 2 个模式
-- ✅ 统计信息
-- ✅ 策略更新 → 自定义权重生效
-- ✅ 持久化验证 → 重新加载后数据完整
-
-#### 📐 ExecutionPlanner（6/6 ✅）
-执行计划生成和管理测试：
-- ✅ Bug 修复计划 → 6 步计划，包含测试步骤
-- ✅ 功能开发计划 → 6 步计划，包含创建步骤
-- ✅ 步骤依赖解析 → analyze → search 正确顺序
-- ✅ 计划完成检测
-- ✅ 进度追踪
-- ✅ 计划摘要生成
-
-#### 🎛️ Autonomy System（6/6 ✅）
-4 级自主性控制系统测试：
-- ✅ SUGGEST 级别 → 所有操作需要确认
-- ✅ AUTO 级别 → 自动执行修改，仅 push 需确认
-- ✅ 步数限制 → 超过限制拒绝执行
-- ✅ 禁止操作 → 在禁止列表中的操作被阻止
-- ✅ 动态级别切换 → ASSIST → AUTONOMOUS
-- ✅ 安全警告 → 无备份/测试未通过时生成警告
-
-#### 🤖 LLMClient（6/6 ✅）
-LLM 客户端和工具调用测试：
-- ✅ 注册 4 个内置工具
-- ✅ read_file 工具 → 真实读取 package.json
-- ✅ run_command 工具 → 真实执行 shell 命令
-- ✅ 未知工具处理 → 优雅返回错误
-- ✅ Mock 响应生成
-- ✅ 历史清空
-
-#### 📦 GitEnv（6/6 ✅）
-对真实 Git 仓库的操作测试：
-- ✅ 打开真实仓库
-- ✅ 获取当前分支 → test/comprehensive-testing-report
-- ✅ 分析项目结构 → 216 个文件
-- ✅ 检测技术栈 → typescript + jest
-- ✅ 获取文件内容 → package.json (1401 chars)
-- ✅ 获取仓库状态
-
-#### 💻 ShellEnv（5/5 ✅）
-Shell 执行环境测试：
-- ✅ 执行简单命令
-- ✅ 错误退出码处理
-- ✅ 构建命令 → success=true, ~1000ms
-- ✅ 指定目录执行
-- ✅ stderr 捕获
-
-#### 🔄 Retry Utilities（6/6 ✅）
-重试和容错机制测试：
-- ✅ 瞬态错误重试 → ECONNRESET 后 3 次成功
-- ✅ 超时控制 → 100ms 超时生效
-- ✅ 退避计算 → 指数退避 + 随机抖动
-- ✅ 断路器 → 2 次失败后断开，reset 后恢复
-- ✅ 批量执行 → 3/4 成功，1/4 失败
-- ✅ 可重试错误分类 → ECONNRESET/503/Invalid argument
-
-#### 🤖 Agent E2E（3/3 ✅）
-Agent 核心工作流端到端测试：
-- ✅ 4 个自主性级别创建 Agent
-- ✅ 事件系统 → 接收 14 个事件
-- ✅ Agent 解决 Issue 流水线 → parse → analyze → search → generate → apply → test
-
-#### 🖥️ CLI Commands（6/6 ✅）
-命令行工具实战测试：
-- ✅ --help → 显示 fix、analyze、learn 命令
-- ✅ --version → 0.1.0
-- ✅ analyze 命令 → 分析实际仓库结构
-- ✅ analyze + JSON 输出 → 生成 techStack=typescript 的报告
-- ✅ learn --stats → 显示进化统计
-- ✅ learn --mine → 执行模式挖掘
-
-#### 📝 Example Scripts（4/4 ✅）
-示例脚本运行测试：
-- ✅ autonomy-example.ts → 正常运行
-- ✅ issue-parsing.ts → 正常运行
-- ✅ evolution-learning.ts → 正常运行
-- ⚠️ basic-usage.ts → 已知 TS 类型错误（maxKnowledgeSize 缺失）
-
-#### 🧪 PoC Scripts（4/4 ✅）
-概念验证脚本运行测试：
-- ✅ ace-poc.ts → ACE Prompt 演化系统
-- ✅ live-tool-poc.ts → Tool Factory 运行时工具合成
-- ✅ sica-poc.ts → Code Evolver 自我修改
-- ✅ rl-loop-poc.ts → RL Loop 强化学习
-
-#### ⚠️ Edge Cases（6/6 ✅）
-边缘情况和错误处理测试：
-- ✅ 不存在的目录搜索 → 空结果，无崩溃
-- ✅ 不存在的文件修改 → 正确抛出错误
-- ✅ 特殊字符解析 → 正确处理 XSS/正则特殊字符
-- ✅ 损坏的数据加载 → JSON 解析错误正确捕获
-- ✅ 空关键词搜索 → 0 结果
-- ✅ 大批量任务失败 → 13/20 成功，7/20 失败
+| 模块 | 新增覆盖的关键路径 |
+|------|-----------------|
+| agent.ts | solve() 完整流水线、extractKeywords()、extractErrorTrace()、searchCode 去重 |
+| code-modifier.ts | fuzzyReplace()、normalizeContent()、oldContent=undefined 覆盖、cleanup()、连续修改回滚 |
+| llm-client.ts | analyzeCode()、suggestFix() JSON fallback、generateCommitMessage() |
+| evolution-store.ts | extractKnowledgeFromSuccess()、optimizeStrategy()、失败模式挖掘、知识去重 |
+| code-search.ts | detectLanguage fallback、escapeRegex 特殊字符、权重排序、空目录 |
 
 ---
 
-## 🐛 三、发现的问题和局限性
+## ✅ 五、结论
 
-### P1 - 重要问题
-| # | 模块 | 描述 | 影响 |
-|---|------|------|------|
-| 1 | ESLint | 项目没有 `.eslintrc` 配置文件，`pnpm run lint` 无法运行 | 无法进行代码质量检查 |
-| 2 | Agent.commitChanges | commit 模板使用 `{issue}` 占位符但替换逻辑使用 `{message}` 和 `{issue_id}` | fix 命令的 git commit 总是失败 |
-
-### P2 - 一般问题
-| # | 模块 | 描述 | 影响 |
-|---|------|------|------|
-| 3 | CodeSearch.searchFunction | 正则表达式不支持 TypeScript 返回类型注解（如 `): Promise<T> {`） | 带返回类型的方法搜索不到 |
-| 4 | Agent.solve | `generateFix` 方法返回空数组（TODO），导致流水线虽然不报错但实际没有修改 | 修复功能未真正实现 |
-| 5 | LLMClient.callLLM | 返回 mock 数据，未对接真实 LLM API | 核心 AI 能力未启用 |
-| 6 | examples/basic-usage.ts | 缺少 `maxKnowledgeSize` 字段导致编译失败 | 示例代码过期 |
-
-### P3 - 建议改进
-| # | 模块 | 描述 |
-|---|------|------|
-| 7 | CodeModifier | 模糊匹配替换在找不到匹配时追加内容而非报错 |
-| 8 | EvolutionStore | 加载损坏的 JSON 数据时直接抛异常，建议增加容错 |
-| 9 | Agent | step 的 duration 在事件中输出为 `undefined`（CLI 显示 `undefinedms`） |
-
----
-
-## 🏗️ 四、构建和编译
-
-| 检查项 | 命令 | 结果 |
-|--------|------|------|
-| TypeScript 编译 | `pnpm run build` | ✅ 通过 |
-| 开发模式 | `npx ts-node src/cli.ts --help` | ✅ 正常 |
-| ESLint | `pnpm run lint` | ⚠️ 缺少配置文件 |
-| Prettier | `pnpm run format` | ✅ 可用 |
-
----
-
-## 📈 五、测试覆盖率分析
-
-### 高覆盖率模块（>80%）
-- `execution-planner.ts` — 100% 语句覆盖率
-- `code-search.ts` — 98.9% 语句覆盖率
-- `autonomy.ts` — 97.67% 语句覆盖率
-- `issue-parser.ts` — 91.03% 语句覆盖率
-- `retry.ts` — 89.89% 语句覆盖率
-- `shell-env.ts` — 81.03% 语句覆盖率
-
-### 低覆盖率模块（<50%）
-- `agent.ts` — 12.5% 语句覆盖率（核心 solve 流程依赖 mock）
-- `llm-client.ts` — 50% 语句覆盖率（LLM API 未对接）
-
----
-
-## ✅ 六、结论
-
-1. **代码质量**：现有代码结构清晰，模块化良好，类型安全
-2. **测试覆盖**：302 个单元测试 + 87 个实战测试，合计 389 个测试全部通过
-3. **核心功能**：CLI 工具、代码搜索、代码修改、自主性系统、执行计划、进化存储系统均正常运行
-4. **待完善**：LLM 对接、ESLint 配置、Agent 核心修复逻辑需要进一步实现
-5. **总体评估**：项目基础架构稳固，MVP 功能可用，适合继续迭代开发
+1. **项目自带测试评估**：302 个测试在基础功能上表现良好，但对核心流水线（agent.solve）和关键容错路径（模糊匹配、JSON fallback）的覆盖严重不足
+2. **代码分析新增测试**：58 个测试针对 11 个分析出的覆盖盲区设计，补充了 agent.solve 流水线、模糊匹配、知识提取、置信度计算等关键路径
+3. **合计 360 个测试全部通过**，项目代码质量稳定
+4. **发现 9 个问题**（3 个 P1、4 个 P2、2 个 P3），最关键的是 agent.ts 的 commit 模板和 searchFunction 的正则限制
+5. **建议优先修复**：ESLint 配置、searchFunction 正则支持 TS 返回类型、agent.commitChanges 模板占位符
