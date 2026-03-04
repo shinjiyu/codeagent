@@ -326,25 +326,95 @@ ${Array.from(this.tools.values()).map(t => `- ${t.name}: ${t.description}`).join
   }
 
   /**
-   * 调用 LLM API
-   * 这里应该对接 OpenClaw 的 LLM 接口
+   * 调用 LLM API（兼容 OpenAI API 格式）
+   * 
+   * 支持 OpenAI、Azure OpenAI、以及任何 OpenAI 兼容的 API（如 DeepSeek、Ollama 等）
+   * 配置方式：
+   *   - 环境变量 OPENAI_API_KEY 设置 API Key
+   *   - config.endpoint 设置自定义 API 地址（默认 https://api.openai.com/v1）
+   *   - config.model 设置模型名称（如 gpt-4、deepseek-chat 等）
    */
   private async callLLM(request: LLMRequest): Promise<LLMResponse> {
-    // TODO: 对接 OpenClaw LLM 接口
-    // 当前返回模拟响应
-    
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.log('[LLM] No OPENAI_API_KEY found, using mock response')
+      return this.mockResponse(request)
+    }
+
+    const endpoint = this.config.endpoint || 'https://api.openai.com/v1'
+    const url = `${endpoint}/chat/completions`
+
+    const body: any = {
+      model: this.config.model,
+      messages: request.messages.map(msg => {
+        const m: any = { role: msg.role, content: msg.content || '' }
+        if (msg.toolCallId) m.tool_call_id = msg.toolCallId
+        if (msg.toolCalls) {
+          m.tool_calls = msg.toolCalls.map(tc => ({
+            id: tc.id,
+            type: tc.type,
+            function: { name: tc.function.name, arguments: tc.function.arguments },
+          }))
+        }
+        return m
+      }),
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.maxTokens ?? 4000,
+    }
+
+    if (request.tools && request.tools.length > 0) {
+      body.tools = request.tools
+      body.tool_choice = request.toolChoice || 'auto'
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`LLM API error ${res.status}: ${errText}`)
+      }
+
+      const data = await res.json() as any
+      const choice = data.choices?.[0]
+
+      const toolCalls: ToolCall[] | undefined = choice?.message?.tool_calls?.map((tc: any) => ({
+        id: tc.id,
+        type: tc.type,
+        function: { name: tc.function.name, arguments: tc.function.arguments },
+      }))
+
+      return {
+        content: choice?.message?.content || '',
+        usage: data.usage ? {
+          promptTokens: data.usage.prompt_tokens,
+          completionTokens: data.usage.completion_tokens,
+          totalTokens: data.usage.total_tokens,
+        } : undefined,
+        model: data.model || this.config.model,
+        finishReason: choice?.finish_reason || 'stop',
+        toolCalls,
+      }
+    } catch (error: any) {
+      console.error('[LLM] API call failed:', error.message)
+      throw error
+    }
+  }
+
+  private mockResponse(request: LLMRequest): LLMResponse {
     console.log('[LLM] Calling model:', this.config.model)
     console.log('[LLM] Messages:', request.messages.length)
     console.log('[LLM] Tools:', request.tools?.length || 0)
-
-    // 模拟响应
     return {
-      content: 'This is a mock response. Please integrate with OpenClaw LLM API.',
-      usage: {
-        promptTokens: 100,
-        completionTokens: 50,
-        totalTokens: 150,
-      },
+      content: 'This is a mock response. Please set OPENAI_API_KEY environment variable.',
+      usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
       model: this.config.model,
       finishReason: 'stop',
     }

@@ -8,7 +8,9 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { CodeSearch } from './code-search'
 import { CodeModifier } from './code-modifier'
+import { LLMClient } from './llm-client'
 import { ShellEnv } from './shell-env'
+import { GitEnv } from './git-env'
 import { EvolutionStore } from './evolution-store'
 import { AutonomyManager, createDefaultAutonomyConfig } from './autonomy'
 import type {
@@ -41,6 +43,7 @@ export class Agent {
   private eventListeners: Map<AgentEventType, Function[]> = new Map()
   private strategy: Strategy
   private shellEnv: ShellEnv
+  private llmClient: LLMClient
   private evolutionStore: EvolutionStore | null = null
   private autonomyManager: AutonomyManager
 
@@ -48,12 +51,12 @@ export class Agent {
     this.config = config
     this.strategy = this.getDefaultStrategy()
     this.shellEnv = new ShellEnv()
+    this.llmClient = new LLMClient(config.llm)
     
     if (config.evolution.enabled) {
       this.evolutionStore = new EvolutionStore()
     }
     
-    // 初始化自主性管理器
     this.autonomyManager = new AutonomyManager(
       config.autonomy ?? createDefaultAutonomyConfig()
     )
@@ -262,14 +265,11 @@ export class Agent {
     structure: any
     techStack: TechStack
   }> {
-    // TODO: 实现仓库分析
-    return {
-      structure: {},
-      techStack: {
-        language: 'typescript',
-        testFramework: 'jest',
-      },
-    }
+    const gitEnv = new GitEnv()
+    await gitEnv.open(repo.path)
+    const structure = await gitEnv.analyzeStructure()
+    const techStack = await gitEnv.detectTechStack()
+    return { structure, techStack }
   }
 
   /**
@@ -315,8 +315,70 @@ export class Agent {
     locations: CodeLocation[],
     repo: Repository
   ): Promise<CodeModification[]> {
-    // TODO: 实现 LLM 驱动的修复生成
-    return []
+    const searcher = new CodeSearch(repo.path)
+    
+    // 读取每个匹配位置的完整代码片段
+    const codeContexts: string[] = []
+    const filesRead = new Set<string>()
+    for (const loc of locations.slice(0, 5)) {
+      if (filesRead.has(loc.file)) continue
+      filesRead.add(loc.file)
+      try {
+        const startLine = Math.max(1, (loc.line || 1) - 20)
+        const endLine = (loc.line || 1) + 40
+        const snippet = await searcher.getSnippet(loc.file, startLine, endLine)
+        codeContexts.push(`--- ${loc.file} (lines ${snippet.startLine}-${snippet.endLine}) ---\n${snippet.content}`)
+      } catch {
+        if (loc.context) {
+          codeContexts.push(`--- ${loc.file}:${loc.line} ---\n${loc.context}`)
+        }
+      }
+    }
+
+    if (codeContexts.length === 0) return []
+
+    const prompt = `You are fixing a code issue. Analyze the problem and generate the minimal fix.
+
+## Issue
+Title: ${issue.title}
+Description: ${issue.body}
+${issue.errorTrace ? `\nError trace:\n${issue.errorTrace}` : ''}
+
+## Relevant code
+${codeContexts.join('\n\n')}
+
+## Instructions
+Generate a JSON array of code modifications. Each modification should have:
+- "file": relative file path
+- "type": "modify" 
+- "oldContent": the exact original code to replace (copy the exact text from the code above)
+- "newContent": the fixed version of that code
+- "description": what this change does
+
+Output ONLY valid JSON, no markdown fences, no explanation before or after.
+Example: [{"file":"src/example.ts","type":"modify","oldContent":"const x = 1","newContent":"const x = 2","description":"fix value"}]`
+
+    const response = await this.llmClient.generateSimple(prompt, { task: 'bug-fix' })
+    this.llmClient.clearHistory()
+
+    // Parse LLM response to extract modifications
+    try {
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      if (!jsonMatch) return []
+      const mods = JSON.parse(jsonMatch[0])
+      if (!Array.isArray(mods)) return []
+      return mods
+        .filter((m: any) => m.file && m.type && m.newContent !== undefined)
+        .map((m: any) => ({
+          file: m.file,
+          type: m.type as 'create' | 'modify' | 'delete',
+          oldContent: m.oldContent,
+          newContent: m.newContent,
+          description: m.description,
+        }))
+    } catch {
+      return []
+    }
   }
 
   /**
@@ -392,6 +454,7 @@ export class Agent {
     
     // 生成提交消息
     const commitMessage = this.config.git.commitTemplate
+      .replace('{issue}', issue.title)
       .replace('{message}', issue.title)
       .replace('{issue_id}', issue.id)
     
@@ -461,13 +524,65 @@ export class Agent {
   }
 
   private extractPatterns(trajectory: Trajectory): Pattern[] {
-    // TODO: 实现模式提取
-    return []
+    const patterns: Pattern[] = []
+    const keywords = trajectory.issue.keywords || []
+    const trigger = keywords.join(' ')
+    if (!trigger) return []
+
+    const successfulSteps = trajectory.steps.filter(s => s.success)
+    const failedSteps = trajectory.steps.filter(s => !s.success)
+
+    if (trajectory.result.success && successfulSteps.length > 0) {
+      patterns.push({
+        id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'success',
+        trigger,
+        action: successfulSteps.map(s => s.type).join(' → '),
+        outcome: trajectory.result.summary,
+        confidence: 0.8,
+        usage: 1,
+        trajectoryIds: [trajectory.id],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+
+    if (failedSteps.length > 0) {
+      const firstFail = failedSteps[0]
+      patterns.push({
+        id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'failure',
+        trigger,
+        action: firstFail.type,
+        outcome: firstFail.error || 'Unknown error',
+        confidence: 0.6,
+        usage: 1,
+        trajectoryIds: [trajectory.id],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+
+    return patterns
   }
 
   private extractKnowledge(trajectory: Trajectory): Knowledge | null {
-    // TODO: 实现知识提取
-    return null
+    if (!trajectory.result.success) return null
+    const keywords = trajectory.issue.keywords || []
+
+    return {
+      id: `knowledge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      category: 'bug-fix',
+      problem: trajectory.issue.title,
+      solution: trajectory.result.summary,
+      codeSnippets: [],
+      references: [trajectory.issue.url || ''],
+      score: 8,
+      usage: 1,
+      tags: keywords,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
   }
 
   private getDefaultStrategy(): Strategy {

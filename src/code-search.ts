@@ -90,11 +90,11 @@ export class CodeSearch {
     const locations: CodeLocation[] = []
     const files = await this.getSourceFiles(['.ts', '.js', '.tsx', '.jsx'])
 
-    // 函数定义的正则模式
+    // 函数定义的正则模式（支持 TypeScript 返回类型注解）
     const patterns = [
       new RegExp(`function\\s+${functionName}\\s*\\(`, 'g'),
       new RegExp(`const\\s+${functionName}\\s*=\\s*(async\\s*)?\\(`, 'g'),
-      new RegExp(`(public|private|protected)?\\s*${functionName}\\s*\\([^)]*\\)\\s*{`, 'g'),
+      new RegExp(`(public|private|protected)?\\s*(async\\s+)?${functionName}\\s*\\([^)]*\\)[^{]*{`, 'g'),
     ]
 
     for (const file of files) {
