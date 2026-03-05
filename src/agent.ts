@@ -63,29 +63,30 @@ export class Agent {
   }
 
   /**
-   * 主入口：解决一个 Issue
+   * 主入口：解决一个 Issue（带自纠错重试）
    */
   async solve(issue: Issue, repo: Repository): Promise<Result> {
-    // 初始化轨迹记录
     this.trajectory = this.initTrajectory(issue, repo)
     const startTime = Date.now()
+    const maxAttempts = this.config.maxRetries + 1
+    const previousErrors: string[] = []
 
     try {
-      // 1. 解析 Issue
+      // 1. 解析 Issue（只需做一次）
       const parsedIssue = await this.executeStep(
         'parse-issue',
         { issue },
         async () => await this.parseIssue(issue)
       )
 
-      // 2. 分析仓库
-      const repoAnalysis = await this.executeStep(
+      // 2. 分析仓库（只需做一次）
+      await this.executeStep(
         'analyze-repo',
         { repo },
         async () => await this.analyzeRepo(repo)
       )
 
-      // 3. 搜索相关代码
+      // 3. 搜索相关代码（只需做一次）
       const locations = await this.executeStep(
         'search-code',
         { keywords: parsedIssue.keywords },
@@ -96,51 +97,84 @@ export class Agent {
         throw new Error('No relevant code found')
       }
 
-      // 4. 生成修复方案
-      const modifications = await this.executeStep(
-        'generate-fix',
-        { locations },
-        async () => await this.generateFix(parsedIssue, locations, repo)
-      )
-
-      // 5. 应用修改
-      await this.executeStep(
-        'apply-modification',
-        { modifications },
-        async () => await this.applyModifications(repo, modifications)
-      )
-
-      // 6. 运行测试
-      const testResult = await this.executeStep(
-        'run-tests',
-        { modifications },
-        async () => await this.runTests(repo, modifications)
-      )
-
-      if (!testResult || testResult.failed === 0) {
-        // 7. 提交更改
-        const commitHash = await this.executeStep(
-          'commit-changes',
-          { modifications },
-          async () => await this.commitChanges(repo, modifications, parsedIssue)
-        )
-
-        // 成功！
-        const result: Result = {
-          success: true,
-          modifications,
-          testResults: testResult,
-          commitHash,
-          summary: `Successfully fixed issue: ${issue.title}`,
+      // 4-7. 生成→应用→测试→提交 的自纠错循环
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const isRetry = attempt > 1
+        if (isRetry) {
+          this.emit('step:start', { type: 'generate-fix', attempt, retry: true })
+          console.log(`\n🔄 Retry attempt ${attempt}/${maxAttempts} — analyzing previous failure...`)
         }
 
-        this.trajectory.result = result
-        return result
-      } else {
-        // 测试失败，需要回滚
-        await this.rollback(repo)
-        throw new Error(`Tests failed: ${testResult.failed} failures`)
+        try {
+          // 生成修复（重试时带上之前的失败信息）
+          const modifications = await this.executeStep(
+            'generate-fix',
+            { locations, attempt, previousErrors },
+            async () => await this.generateFix(parsedIssue, locations, repo, previousErrors)
+          )
+
+          if (modifications.length === 0) {
+            const msg = 'No modifications generated'
+            previousErrors.push(`Attempt ${attempt}: ${msg}`)
+            if (attempt < maxAttempts) continue
+            throw new Error(msg)
+          }
+
+          // 应用修改
+          try {
+            await this.executeStep(
+              'apply-modification',
+              { modifications, attempt },
+              async () => await this.applyModifications(repo, modifications)
+            )
+          } catch (applyError: any) {
+            await this.rollback(repo)
+            previousErrors.push(`Attempt ${attempt} apply failed: ${applyError.message}`)
+            if (attempt < maxAttempts) continue
+            throw applyError
+          }
+
+          // 运行测试
+          const testResult = await this.executeStep(
+            'run-tests',
+            { modifications, attempt },
+            async () => await this.runTests(repo, modifications)
+          )
+
+          if (testResult && testResult.failed > 0) {
+            await this.rollback(repo)
+            const failMsg = `Tests failed: ${testResult.failed} failures` +
+              (testResult.failures?.length ? ` — ${testResult.failures.map(f => f.message).join('; ')}` : '')
+            previousErrors.push(`Attempt ${attempt}: ${failMsg}`)
+            if (attempt < maxAttempts) continue
+            throw new Error(failMsg)
+          }
+
+          // 提交
+          const commitHash = await this.executeStep(
+            'commit-changes',
+            { modifications, attempt },
+            async () => await this.commitChanges(repo, modifications, parsedIssue)
+          )
+
+          const result: Result = {
+            success: true,
+            modifications,
+            testResults: testResult,
+            commitHash,
+            summary: `Successfully fixed issue: ${issue.title}` +
+              (isRetry ? ` (after ${attempt} attempts)` : ''),
+          }
+          this.trajectory.result = result
+          return result
+
+        } catch (error: any) {
+          if (attempt >= maxAttempts) throw error
+          // 否则继续循环重试
+        }
       }
+
+      throw new Error('All retry attempts exhausted')
     } catch (error: any) {
       const result: Result = {
         success: false,
@@ -151,14 +185,12 @@ export class Agent {
       this.trajectory.result = result
       throw error
     } finally {
-      // 记录元数据
       const endTime = Date.now()
       this.trajectory.metadata.duration = endTime - startTime
+      this.trajectory.metadata.retryCount = previousErrors.length
 
-      // 保存轨迹
       await this.saveTrajectory()
 
-      // 学习和进化
       if (this.config.evolution.enabled) {
         await this.learn()
       }
@@ -308,12 +340,13 @@ export class Agent {
   }
 
   /**
-   * 生成修复方案
+   * 生成修复方案（支持自纠错：将前次失败原因反馈给 LLM）
    */
   private async generateFix(
     issue: Issue,
     locations: CodeLocation[],
-    repo: Repository
+    repo: Repository,
+    previousErrors: string[] = []
   ): Promise<CodeModification[]> {
     const searcher = new CodeSearch(repo.path)
     
@@ -345,13 +378,17 @@ export class Agent {
 
     if (codeContexts.length === 0) return []
 
+    const errorFeedback = previousErrors.length > 0
+      ? `\n## PREVIOUS FAILED ATTEMPTS\nThe following approaches were already tried and FAILED. You MUST try a DIFFERENT approach:\n${previousErrors.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nAnalyze why previous attempts failed and generate a corrected fix.\n`
+      : ''
+
     const prompt = `You are fixing a code issue. Generate the MINIMAL fix — change as few lines as possible.
 
 ## Issue
 Title: ${issue.title}
 Description: ${issue.body}
 ${issue.errorTrace ? `\nError trace:\n${issue.errorTrace}` : ''}
-
+${errorFeedback}
 ## Source code (with line numbers)
 ${codeContexts.join('\n\n')}
 
@@ -588,8 +625,9 @@ Example: [{"file":"src/app.ts","type":"modify","oldContent":"    const result = 
       .replace('{message}', issue.title)
       .replace('{issue_id}', issue.id)
     
-    // Git commit
-    const commitResult = await this.shellEnv.exec(`git commit -m "${commitMessage}"`)
+    // Git commit（用单引号避免 shell 特殊字符展开，内部单引号转义）
+    const safeMessage = commitMessage.replace(/'/g, "'\\''")
+    const commitResult = await this.shellEnv.exec(`git commit -m '${safeMessage}'`)
     
     if (!commitResult.success) {
       throw new Error(`Failed to commit changes: ${commitResult.stderr}`)
