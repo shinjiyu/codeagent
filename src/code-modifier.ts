@@ -253,7 +253,7 @@ export class CodeModifier {
       }
       
       const normalizedScore = score / oldLines.length
-      if (normalizedScore > bestScore && normalizedScore >= 0.6) {
+      if (normalizedScore > bestScore && normalizedScore >= 0.75) {
         bestScore = normalizedScore
         bestStart = i
       }

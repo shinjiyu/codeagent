@@ -440,23 +440,36 @@ Example: [{"file":"src/app.ts","type":"modify","oldContent":"    const result = 
    */
   private findBestMatch(fileContent: string, llmOldContent: string): string | null {
     const fileLines = fileContent.split('\n')
-    const targetLines = llmOldContent.split('\n').map(l => l.trimEnd())
+    const targetLines = llmOldContent.split('\n').filter(l => l.trim() !== '')
     
     if (targetLines.length === 0) return null
 
+    const normalize = (s: string) => s.replace(/\s+/g, ' ').replace(/;\s*$/,'').trim()
+
+    // 单行匹配：要求归一化后精确匹配
+    if (targetLines.length === 1) {
+      const target = normalize(targetLines[0])
+      if (target.length < 5) return null
+      for (let i = 0; i < fileLines.length; i++) {
+        if (normalize(fileLines[i]) === target) {
+          return fileLines[i]
+        }
+      }
+      return null
+    }
+
+    // 多行匹配：滑动窗口 + 行级相似度
     let bestScore = 0
     let bestStart = -1
     let bestLength = 0
+    const minThreshold = 0.75
 
-    // 滑动窗口搜索最佳匹配区域
-    for (let i = 0; i <= fileLines.length - 1; i++) {
-      const windowSize = Math.min(targetLines.length + 2, fileLines.length - i)
-      
-      for (let len = Math.max(1, targetLines.length - 2); len <= windowSize; len++) {
+    for (let i = 0; i <= fileLines.length - targetLines.length + 2; i++) {
+      for (let len = Math.max(1, targetLines.length - 2); len <= Math.min(targetLines.length + 2, fileLines.length - i); len++) {
         const windowLines = fileLines.slice(i, i + len)
         const score = this.calculateSimilarity(windowLines, targetLines)
         
-        if (score > bestScore && score > 0.6) {
+        if (score > bestScore && score >= minThreshold) {
           bestScore = score
           bestStart = i
           bestLength = len
@@ -477,24 +490,25 @@ Example: [{"file":"src/app.ts","type":"modify","oldContent":"    const result = 
   private calculateSimilarity(actual: string[], target: string[]): number {
     if (actual.length === 0 || target.length === 0) return 0
 
-    let matchedLines = 0
-    const normalizedActual = actual.map(l => l.replace(/\s+/g, ' ').replace(/;$/,'').trim())
-    const normalizedTarget = target.map(l => l.replace(/\s+/g, ' ').replace(/;$/,'').trim())
+    const normalize = (s: string) => s.replace(/\s+/g, ' ').replace(/;\s*$/,'').trim()
+    const normalizedActual = actual.map(normalize)
+    const normalizedTarget = target.map(normalize).filter(l => l !== '')
 
-    for (const targetLine of normalizedTarget) {
-      if (targetLine === '') continue
-      if (normalizedActual.some(al => al === targetLine || al.includes(targetLine) || targetLine.includes(al))) {
+    if (normalizedTarget.length === 0) return 0
+
+    let matchedLines = 0
+    for (const tl of normalizedTarget) {
+      if (normalizedActual.some(al => al === tl)) {
         matchedLines++
+      } else if (normalizedActual.some(al => al.includes(tl) || tl.includes(al))) {
+        matchedLines += 0.6
       }
     }
 
-    const nonEmptyTarget = normalizedTarget.filter(l => l !== '').length
-    if (nonEmptyTarget === 0) return 0
+    const lineScore = matchedLines / normalizedTarget.length
+    const lengthRatio = Math.min(actual.length, target.length) / Math.max(actual.length, target.length)
     
-    const lineScore = matchedLines / nonEmptyTarget
-    const lengthPenalty = 1 - Math.abs(actual.length - target.length) / Math.max(actual.length, target.length) * 0.3
-    
-    return lineScore * lengthPenalty
+    return lineScore * (0.7 + 0.3 * lengthRatio)
   }
 
   /**
