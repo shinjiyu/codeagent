@@ -25,7 +25,8 @@ program
   .command('fix <issue>')
   .description('Fix a GitHub issue or problem description')
   .option('-r, --repo <path>', 'Path to the repository', '.')
-  .option('-m, --model <model>', 'LLM model to use', 'gpt-4')
+  .option('-m, --model <model>', 'LLM model to use', 'glm-4-flash')
+  .option('--endpoint <url>', 'LLM API endpoint', 'https://open.bigmodel.cn/api/paas/v4')
   .option('--no-evolution', 'Disable self-evolution', false)
   .option('-v, --verbose', 'Enable verbose output', false)
   .action(async (issue: string, options) => {
@@ -41,6 +42,7 @@ program
           model: options.model,
           temperature: 0.7,
           maxTokens: 4000,
+          endpoint: options.endpoint,
         },
         git: {
           defaultBranch: 'main',
