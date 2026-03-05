@@ -93,23 +93,39 @@ export class CodeModifier {
 
     // 如果提供了旧内容，进行替换
     if (oldContent) {
-      // 精确匹配替换
+      // 策略 1: 精确匹配
       if (currentContent.includes(oldContent)) {
         const updatedContent = currentContent.replace(oldContent, newContent)
         fs.writeFileSync(filePath, updatedContent, 'utf-8')
-      } else {
-        // 尝试模糊匹配（忽略空白差异）
-        const normalizedOld = this.normalizeContent(oldContent)
-        const normalizedCurrent = this.normalizeContent(currentContent)
-        
-        if (normalizedCurrent.includes(normalizedOld)) {
-          // 找到近似匹配，使用行级替换
-          const updatedContent = this.fuzzyReplace(currentContent, oldContent, newContent)
-          fs.writeFileSync(filePath, updatedContent, 'utf-8')
-        } else {
-          throw new Error(`Old content not found in file: ${filePath}`)
-        }
+        return
       }
+
+      // 策略 2: 去掉尾部分号差异后匹配
+      const stripped = this.stripTrailingSemicolons(oldContent)
+      const strippedCurrent = this.stripTrailingSemicolons(currentContent)
+      if (strippedCurrent.includes(stripped) && stripped.trim().length > 10) {
+        const updatedContent = this.fuzzyReplace(currentContent, oldContent, newContent)
+        fs.writeFileSync(filePath, updatedContent, 'utf-8')
+        return
+      }
+
+      // 策略 3: 空白归一化后匹配
+      const normalizedOld = this.normalizeContent(oldContent)
+      const normalizedCurrent = this.normalizeContent(currentContent)
+      if (normalizedCurrent.includes(normalizedOld) && normalizedOld.trim().length > 10) {
+        const updatedContent = this.fuzzyReplace(currentContent, oldContent, newContent)
+        fs.writeFileSync(filePath, updatedContent, 'utf-8')
+        return
+      }
+
+      // 策略 4: 逐行相似度匹配（容忍注释和空白差异）
+      const lineMatchResult = this.bestLineMatch(currentContent, oldContent, newContent)
+      if (lineMatchResult) {
+        fs.writeFileSync(filePath, lineMatchResult, 'utf-8')
+        return
+      }
+
+      throw new Error(`Old content not found in file: ${filePath}`)
     } else {
       // 没有提供旧内容，直接覆盖
       fs.writeFileSync(filePath, newContent, 'utf-8')
@@ -199,6 +215,58 @@ export class CodeModifier {
       .replace(/\r\n/g, '\n')
       .replace(/\s+/g, ' ')
       .trim()
+  }
+
+  /**
+   * 去掉每行尾部分号（LLM 经常多加或少加分号）
+   */
+  private stripTrailingSemicolons(content: string): string {
+    return content.split('\n').map(line => line.replace(/;\s*$/, '')).join('\n')
+  }
+
+  /**
+   * 基于行相似度的最佳匹配替换
+   * 在文件中找到与 oldContent 最接近的区域，然后替换
+   */
+  private bestLineMatch(fileContent: string, oldContent: string, newContent: string): string | null {
+    const fileLines = fileContent.split('\n')
+    const oldLines = oldContent.split('\n').filter(l => l.trim() !== '')
+    
+    if (oldLines.length === 0) return null
+    
+    const normalize = (s: string) => s.replace(/\s+/g, ' ').replace(/;$/,'').trim()
+    const normalizedOldLines = oldLines.map(normalize)
+
+    let bestStart = -1
+    let bestScore = 0
+
+    for (let i = 0; i <= fileLines.length - oldLines.length; i++) {
+      let score = 0
+      for (let j = 0; j < oldLines.length; j++) {
+        const fileLine = normalize(fileLines[i + j])
+        const oldLine = normalizedOldLines[j]
+        if (fileLine === oldLine) {
+          score += 1.0
+        } else if (fileLine.includes(oldLine) || oldLine.includes(fileLine)) {
+          score += 0.7
+        }
+      }
+      
+      const normalizedScore = score / oldLines.length
+      if (normalizedScore > bestScore && normalizedScore >= 0.6) {
+        bestScore = normalizedScore
+        bestStart = i
+      }
+    }
+
+    if (bestStart < 0) return null
+
+    const result = [
+      ...fileLines.slice(0, bestStart),
+      ...newContent.split('\n'),
+      ...fileLines.slice(bestStart + oldLines.length),
+    ]
+    return result.join('\n')
   }
 
   /**

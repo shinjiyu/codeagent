@@ -317,17 +317,25 @@ export class Agent {
   ): Promise<CodeModification[]> {
     const searcher = new CodeSearch(repo.path)
     
-    // 读取每个匹配位置的完整代码片段
+    // 读取每个匹配位置的完整代码片段（带行号，帮助 LLM 精确定位）
     const codeContexts: string[] = []
+    const fileContents = new Map<string, string>()
     const filesRead = new Set<string>()
     for (const loc of locations.slice(0, 5)) {
       if (filesRead.has(loc.file)) continue
       filesRead.add(loc.file)
       try {
-        const startLine = Math.max(1, (loc.line || 1) - 20)
-        const endLine = (loc.line || 1) + 40
-        const snippet = await searcher.getSnippet(loc.file, startLine, endLine)
-        codeContexts.push(`--- ${loc.file} (lines ${snippet.startLine}-${snippet.endLine}) ---\n${snippet.content}`)
+        const filePath = path.isAbsolute(loc.file) ? loc.file : path.join(repo.path, loc.file)
+        const fullContent = fs.readFileSync(filePath, 'utf-8')
+        fileContents.set(loc.file, fullContent)
+        
+        const lines = fullContent.split('\n')
+        const startLine = Math.max(0, (loc.line || 1) - 21)
+        const endLine = Math.min(lines.length, (loc.line || 1) + 39)
+        const numberedLines = lines.slice(startLine, endLine)
+          .map((line, i) => `${String(startLine + i + 1).padStart(4)} | ${line}`)
+          .join('\n')
+        codeContexts.push(`--- ${loc.file} ---\n${numberedLines}`)
       } catch {
         if (loc.context) {
           codeContexts.push(`--- ${loc.file}:${loc.line} ---\n${loc.context}`)
@@ -337,48 +345,156 @@ export class Agent {
 
     if (codeContexts.length === 0) return []
 
-    const prompt = `You are fixing a code issue. Analyze the problem and generate the minimal fix.
+    const prompt = `You are fixing a code issue. Generate the MINIMAL fix — change as few lines as possible.
 
 ## Issue
 Title: ${issue.title}
 Description: ${issue.body}
 ${issue.errorTrace ? `\nError trace:\n${issue.errorTrace}` : ''}
 
-## Relevant code
+## Source code (with line numbers)
 ${codeContexts.join('\n\n')}
 
-## Instructions
-Generate a JSON array of code modifications. Each modification should have:
-- "file": relative file path
-- "type": "modify" 
-- "oldContent": the exact original code to replace (copy the exact text from the code above)
-- "newContent": the fixed version of that code
-- "description": what this change does
+## Output format
+Generate a JSON array with 1-3 modifications (fewer is better). Each modification:
+- "file": relative file path (exactly as shown above)
+- "type": "modify"
+- "oldContent": the EXACT original lines to replace — copy them VERBATIM from the source code above, WITHOUT the line numbers. Include 2-3 lines of surrounding context so the match is unique. Preserve the exact whitespace/indentation.
+- "newContent": the replacement code with the fix applied
+- "description": one-line explanation
 
-Output ONLY valid JSON, no markdown fences, no explanation before or after.
-Example: [{"file":"src/example.ts","type":"modify","oldContent":"const x = 1","newContent":"const x = 2","description":"fix value"}]`
+CRITICAL RULES:
+1. Output ONLY a JSON array. No markdown, no explanation, no code fences.
+2. Copy oldContent EXACTLY from the source — same indentation, same semicolons (or lack thereof), same quotes.
+3. Keep modifications minimal — only change what's needed to fix the bug.
+4. Each oldContent must be a UNIQUE substring of the file (include enough context lines).
+
+Example: [{"file":"src/app.ts","type":"modify","oldContent":"    const result = calculate(x)\\n    return result","newContent":"    const result = calculate(x, y)\\n    return result","description":"pass missing parameter y"}]`
 
     const response = await this.llmClient.generateSimple(prompt, { task: 'bug-fix' })
     this.llmClient.clearHistory()
 
-    // Parse LLM response to extract modifications
+    // Parse LLM response
+    let mods: any[] = []
     try {
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      const jsonMatch = response.match(/\[[\s\S]*?\]/)
       if (!jsonMatch) return []
-      const mods = JSON.parse(jsonMatch[0])
+      mods = JSON.parse(jsonMatch[0])
       if (!Array.isArray(mods)) return []
-      return mods
-        .filter((m: any) => m.file && m.type && m.newContent !== undefined)
-        .map((m: any) => ({
-          file: m.file,
-          type: m.type as 'create' | 'modify' | 'delete',
-          oldContent: m.oldContent,
-          newContent: m.newContent,
-          description: m.description,
-        }))
     } catch {
       return []
     }
+
+    // Post-process: clean, validate, and fix each modification
+    const validMods: CodeModification[] = []
+    const modifiedFiles = new Set<string>()
+    for (const m of mods) {
+      if (!m.file || !m.newContent || m.type !== 'modify') continue
+      if (!m.oldContent || m.oldContent.trim() === '') continue
+      if (modifiedFiles.has(m.file)) continue  // 同一文件只取第一个修改
+
+      const fileContent = fileContents.get(m.file)
+      if (!fileContent) continue
+
+      // 清洗 LLM 输出：去掉行号前缀 (e.g. "  42 | code" → "code")
+      const cleanOld = this.cleanLLMOutput(m.oldContent)
+      const cleanNew = this.cleanLLMOutput(m.newContent)
+
+      // 策略 1: 精确匹配清洗后的内容
+      if (fileContent.includes(cleanOld)) {
+        validMods.push({ file: m.file, type: 'modify', oldContent: cleanOld, newContent: cleanNew, description: m.description })
+        modifiedFiles.add(m.file)
+        continue
+      }
+
+      // 策略 2: 在文件中找到最接近的匹配区域
+      const corrected = this.findBestMatch(fileContent, cleanOld)
+      if (corrected) {
+        validMods.push({ file: m.file, type: 'modify', oldContent: corrected, newContent: cleanNew, description: m.description })
+        modifiedFiles.add(m.file)
+      }
+    }
+
+    return validMods
+  }
+
+  /**
+   * 清洗 LLM 输出中的行号前缀和 markdown 残留
+   */
+  private cleanLLMOutput(content: string): string {
+    return content
+      .split('\n')
+      .map(line => {
+        // 去掉 "  42 | code" 或 "42| code" 格式的行号前缀
+        const lineNumMatch = line.match(/^\s*\d+\s*\|\s?(.*)$/)
+        if (lineNumMatch) return lineNumMatch[1]
+        return line
+      })
+      .join('\n')
+      .replace(/^```\w*\n?/gm, '')  // 去掉 markdown 代码块标记
+      .replace(/\n?```$/gm, '')
+  }
+
+  /**
+   * 在文件内容中找到与 LLM 输出的 oldContent 最接近的匹配
+   */
+  private findBestMatch(fileContent: string, llmOldContent: string): string | null {
+    const fileLines = fileContent.split('\n')
+    const targetLines = llmOldContent.split('\n').map(l => l.trimEnd())
+    
+    if (targetLines.length === 0) return null
+
+    let bestScore = 0
+    let bestStart = -1
+    let bestLength = 0
+
+    // 滑动窗口搜索最佳匹配区域
+    for (let i = 0; i <= fileLines.length - 1; i++) {
+      const windowSize = Math.min(targetLines.length + 2, fileLines.length - i)
+      
+      for (let len = Math.max(1, targetLines.length - 2); len <= windowSize; len++) {
+        const windowLines = fileLines.slice(i, i + len)
+        const score = this.calculateSimilarity(windowLines, targetLines)
+        
+        if (score > bestScore && score > 0.6) {
+          bestScore = score
+          bestStart = i
+          bestLength = len
+        }
+      }
+    }
+
+    if (bestStart >= 0) {
+      return fileLines.slice(bestStart, bestStart + bestLength).join('\n')
+    }
+
+    return null
+  }
+
+  /**
+   * 计算两组代码行的相似度 (0-1)
+   */
+  private calculateSimilarity(actual: string[], target: string[]): number {
+    if (actual.length === 0 || target.length === 0) return 0
+
+    let matchedLines = 0
+    const normalizedActual = actual.map(l => l.replace(/\s+/g, ' ').replace(/;$/,'').trim())
+    const normalizedTarget = target.map(l => l.replace(/\s+/g, ' ').replace(/;$/,'').trim())
+
+    for (const targetLine of normalizedTarget) {
+      if (targetLine === '') continue
+      if (normalizedActual.some(al => al === targetLine || al.includes(targetLine) || targetLine.includes(al))) {
+        matchedLines++
+      }
+    }
+
+    const nonEmptyTarget = normalizedTarget.filter(l => l !== '').length
+    if (nonEmptyTarget === 0) return 0
+    
+    const lineScore = matchedLines / nonEmptyTarget
+    const lengthPenalty = 1 - Math.abs(actual.length - target.length) / Math.max(actual.length, target.length) * 0.3
+    
+    return lineScore * lengthPenalty
   }
 
   /**

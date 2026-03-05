@@ -182,7 +182,7 @@ describe('CodeModifier 深度测试', () => {
     const modifier = new CodeModifier(tempDir)
     await expect(modifier.applyModifications([{
       file: 'nomatch.ts', type: 'modify' as const,
-      oldContent: 'completely different content that does not exist anywhere',
+      oldContent: 'function zzzNonExistent() {\n  return "this code block is unique and has no match in the target file at all";\n  const qqq = 999;\n}',
       newContent: 'new content',
     }])).rejects.toThrow('Old content not found')
   })
